@@ -13,7 +13,14 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
         return;
     }
 
-    const existingPseudo = await knex('users').where('minecraft_username', pseudo).first();
+    // Règle des pseudos Minecraft ; empêche aussi d'injecter des arguments dans les commandes console
+    if (!/^[A-Za-z0-9_]{3,16}$/.test(pseudo)) {
+        await interaction.reply({ content: `Pseudo invalide : 3 à 16 caractères, lettres, chiffres et _ uniquement`, flags: MessageFlags.Ephemeral });
+        return;
+    }
+
+    // Minecraft ne distingue pas les majuscules dans les pseudos
+    const existingPseudo = await knex('users').whereRaw('lower(minecraft_username) = ?', pseudo.toLowerCase()).first();
 
     if (existingPseudo) {
         await interaction.reply({ content: `Ce pseudo est déjà pris`, flags: MessageFlags.Ephemeral });

@@ -68,8 +68,9 @@ module.exports = {
         if (subcommand === 'add') {
             const nom = interaction.options.getString('nom');
 
-            if (nom.length > 12) {
-                await interaction.reply({ content: `❌ Le nom de l'équipe ne peut pas dépasser 12 caractères (actuellement: ${nom.length})`, flags: MessageFlags.Ephemeral });
+            // Mêmes règles que BetterTeams (allowedChars, min/maxTeamLength), sinon `teama create` échoue côté Minecraft
+            if (!/^[A-Za-z0-9'._-]{2,20}$/.test(nom)) {
+                await interaction.reply({ content: `❌ Nom d'équipe invalide : 2 à 20 caractères, lettres, chiffres, \`'\`, \`.\`, \`_\`, et \`-\` uniquement`, flags: MessageFlags.Ephemeral });
                 return;
             }
 

@@ -168,6 +168,8 @@ client.on('interactionCreate', async interaction => {
                 .setCustomId('pseudoInput')
                 .setLabel("Pseudo Minecraft")
                 .setStyle(TextInputStyle.Short)
+                .setMinLength(3)
+                .setMaxLength(16)
                 .setRequired(true);
 
             modal.addComponents(new ActionRowBuilder().addComponents(pseudoInput));
