@@ -88,6 +88,15 @@ module.exports = {
                 return;
             }
 
+            const existingTeam = await knex('teams').whereRaw('lower(label) = ?', nom.toLowerCase()).first();
+            if (existingTeam) {
+                await interaction.reply({ content: `❌ L'équipe **${existingTeam.label}** existe déjà`, flags: MessageFlags.Ephemeral });
+                return;
+            }
+
+            // Éléments Discord créés, à supprimer si une étape échoue
+            const created = [];
+
             try {
                 await interaction.deferReply();
 
@@ -96,6 +105,7 @@ module.exports = {
                     name: nom,
                     reason: `Création automatique pour l'équipe ${nom}`
                 });
+                created.push(role);
 
                 // 2. Créer la catégorie privée
                 const category = await interaction.guild.channels.create({
@@ -112,13 +122,15 @@ module.exports = {
                         }
                     ],
                 });
+                created.push(category);
 
                 // 3. Créer le salon textuel "général"
-                await interaction.guild.channels.create({
+                const textChannel = await interaction.guild.channels.create({
                     name: 'général',
                     type: ChannelType.GuildText,
                     parent: category.id,
                 });
+                created.push(textChannel);
 
                 // 4. Créer le salon vocal
                 const voiceChannel = await interaction.guild.channels.create({
@@ -126,6 +138,7 @@ module.exports = {
                     type: ChannelType.GuildVoice,
                     parent: category.id,
                 });
+                created.push(voiceChannel);
 
                 // 5. Ajouter le salon vocal comme trigger channel
                 await knex('trigger_channels').insert({ channel_id: voiceChannel.id });
@@ -155,6 +168,15 @@ module.exports = {
                 });
             } catch (error) {
                 console.error('Erreur création équipe:', error);
+
+                // Annuler ce qui a été créé (salons avant la catégorie, rôle en dernier)
+                const ids = created.map(item => item.id);
+                for (const item of created.reverse()) {
+                    await item.delete().catch(deleteError => console.error('Erreur annulation:', deleteError));
+                }
+                await knex('trigger_channels').whereIn('channel_id', ids).delete().catch(console.error);
+                await knex('teams').whereIn('role_id', ids).delete().catch(console.error);
+
                 await replyError(interaction, error);
             }
         }
