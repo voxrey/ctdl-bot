@@ -1,6 +1,6 @@
 const { MessageFlags } = require('discord.js');
 const { generatePassword } = require('./password');
-const { sendLoginInstructions } = require('./messages');
+const { sendLoginInstructions, replyError } = require('./messages');
 const { sendMinecraftCommand } = require('./pterodactyl');
 
 async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
@@ -70,7 +70,7 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
             await interaction.reply({ content: `Erreur: Rôle introuvable`, flags: MessageFlags.Ephemeral });
         }
     } catch (err) {
-        await interaction.reply({ content: `Erreur: ${err.message}`, flags: MessageFlags.Ephemeral });
+        await replyError(interaction, err);
     }
 }
 

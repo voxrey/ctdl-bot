@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, PermissionsBitField, ActionRowBuilder, StringSelectMenuBuilder, MessageFlags } = require('discord.js');
+const { replyError } = require('../utils/messages');
 
 async function createInscriptionMessage(channel, knex) {
     const teams = await knex('teams').select('*');
@@ -61,7 +62,7 @@ module.exports = {
                 await interaction.reply({ content: `Formulaire envoyé dans <#${channel.id}>`, flags: MessageFlags.Ephemeral });
             }
         } catch (error) {
-            await interaction.reply({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
+            await replyError(interaction, error);
         }
     }
 };

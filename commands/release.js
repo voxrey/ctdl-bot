@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
-const { sendLoginInstructions } = require('../utils/messages');
+const { sendLoginInstructions, replyError } = require('../utils/messages');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -56,9 +56,7 @@ module.exports = {
                 await interaction.reply({ content: 'Mode release désactivé' });
             }
         } catch (error) {
-            await interaction.reply({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral }).catch(() => {
-                interaction.editReply({ content: `Erreur: ${error.message}` });
-            });
+            await replyError(interaction, error);
         }
     }
 };

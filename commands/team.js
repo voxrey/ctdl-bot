@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, PermissionsBitField, ActionRowBuilder, StringSelectMenuBuilder, ChannelType, MessageFlags } = require('discord.js');
 const { sendMinecraftCommand } = require('../utils/pterodactyl');
+const { replyError } = require('../utils/messages');
 
 async function updateInscriptionMessages(knex, client) {
     const messages = await knex('inscription_messages').select('*');
@@ -154,8 +155,7 @@ module.exports = {
                 });
             } catch (error) {
                 console.error('Erreur création équipe:', error);
-                const replyMethod = interaction.deferred ? 'editReply' : 'reply';
-                await interaction[replyMethod]({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
+                await replyError(interaction, error);
             }
         }
 
@@ -278,8 +278,7 @@ module.exports = {
                 });
             } catch (error) {
                 console.error('Erreur suppression équipe:', error);
-                const replyMethod = interaction.deferred ? 'editReply' : 'reply';
-                await interaction[replyMethod]({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
+                await replyError(interaction, error);
             }
         }
 
@@ -318,7 +317,7 @@ module.exports = {
 
                 await interaction.reply({ content: `**Statistiques d'inscription:**\n\n${sections.join('\n')}` });
             } catch (error) {
-                await interaction.reply({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
+                await replyError(interaction, error);
             }
         }
     }

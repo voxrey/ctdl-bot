@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
 const { sendMinecraftCommand } = require('../utils/pterodactyl');
+const { replyError } = require('../utils/messages');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -82,7 +83,7 @@ module.exports = {
                     }
                 }
             } catch (error) {
-                await interaction.reply({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
+                await replyError(interaction, error);
             }
         }
 
@@ -113,7 +114,7 @@ module.exports = {
                     flags: MessageFlags.Ephemeral
                 });
             } catch (error) {
-                await interaction.reply({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
+                await replyError(interaction, error);
             }
         }
 
@@ -167,7 +168,7 @@ module.exports = {
 
                 await interaction.reply({ content: `Utilisateur <@${user.id}> (**${minecraftUsername}**) désenregistré` });
             } catch (error) {
-                await interaction.reply({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
+                await replyError(interaction, error);
             }
         }
     }

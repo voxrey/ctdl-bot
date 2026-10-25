@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
+const { replyError } = require('../utils/messages');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -54,7 +55,7 @@ module.exports = {
                 await knex('trigger_channels').insert({ channel_id: channel.id });
                 await interaction.reply({ content: `Salon <#${channel.id}> ajouté` });
             } catch (error) {
-                await interaction.reply({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
+                await replyError(interaction, error);
             }
         }
 
@@ -69,7 +70,7 @@ module.exports = {
                     await interaction.reply({ content: `Salon <#${channel.id}> non configuré` });
                 }
             } catch (error) {
-                await interaction.reply({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
+                await replyError(interaction, error);
             }
         }
     }

@@ -1,6 +1,6 @@
 require('dotenv').config({ quiet: true });
 
-const { Client, GatewayIntentBits, ChannelType, PermissionsBitField, ModalBuilder, TextInputBuilder, TextInputStyle, InteractionType, REST, Routes, MessageFlags } = require('discord.js');
+const { Client, GatewayIntentBits, ChannelType, PermissionsBitField, ModalBuilder, TextInputBuilder, TextInputStyle, InteractionType, REST, Routes } = require('discord.js');
 const knexConfig = require('./knexfile');
 const fs = require('fs');
 const path = require('path');
@@ -30,6 +30,7 @@ for (const file of commandFiles) {
 }
 
 const { handleInscription } = require('./utils/inscription-handler');
+const { replyError } = require('./utils/messages');
 const { sendMinecraftCommand, getServerState } = require('./utils/pterodactyl');
 
 // Supprime les salons temporaires vidés ou supprimés pendant que le bot était éteint
@@ -147,8 +148,7 @@ client.on('interactionCreate', async interaction => {
                     return;
                 }
                 console.error('Erreur commande:', error);
-                const replyMethod = interaction.replied || interaction.deferred ? 'followUp' : 'reply';
-                await interaction[replyMethod]({ content: 'Erreur lors de l\'exécution de la commande', flags: MessageFlags.Ephemeral }).catch(console.error);
+                await replyError(interaction, error);
             }
         }
     }
