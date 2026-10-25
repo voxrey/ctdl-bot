@@ -1,31 +1,5 @@
-const { SlashCommandBuilder, PermissionsBitField, ActionRowBuilder, StringSelectMenuBuilder, MessageFlags } = require('discord.js');
-const { replyError } = require('../utils/messages');
-
-async function createInscriptionMessage(channel, knex) {
-    const teams = await knex('teams').select('*');
-
-    if (teams.length === 0) {
-        return null;
-    }
-
-    const row = new ActionRowBuilder()
-        .addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('select_team')
-                .setPlaceholder('Choisissez votre équipe')
-                .addOptions(
-                    teams.map(team => ({
-                        label: team.label,
-                        value: team.id.toString(),
-                    }))
-                ),
-        );
-
-    return await channel.send({
-        content: 'Choisissez votre équipe pour vous inscrire.',
-        components: [row]
-    });
-}
+const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
+const { replyError, buildInscriptionMessage } = require('../utils/messages');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -52,15 +26,13 @@ module.exports = {
                 return;
             }
 
-            const message = await createInscriptionMessage(channel, knex);
-            if (message) {
-                await knex('inscription_messages').insert({
-                    channel_id: channel.id,
-                    message_id: message.id
-                });
-                await knex('app_state').update({ inscrit_role_id: roleInscrit.id });
-                await interaction.reply({ content: `Formulaire envoyé dans <#${channel.id}>`, flags: MessageFlags.Ephemeral });
-            }
+            const message = await channel.send(buildInscriptionMessage(teams));
+            await knex('inscription_messages').insert({
+                channel_id: channel.id,
+                message_id: message.id
+            });
+            await knex('app_state').update({ inscrit_role_id: roleInscrit.id });
+            await interaction.reply({ content: `Formulaire envoyé dans <#${channel.id}>`, flags: MessageFlags.Ephemeral });
         } catch (error) {
             await replyError(interaction, error);
         }

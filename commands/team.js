@@ -1,6 +1,7 @@
-const { SlashCommandBuilder, PermissionsBitField, ActionRowBuilder, StringSelectMenuBuilder, ChannelType, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, ChannelType, MessageFlags } = require('discord.js');
 const { sendMinecraftCommand } = require('../utils/pterodactyl');
-const { replyError } = require('../utils/messages');
+const { replyError, buildInscriptionMessage } = require('../utils/messages');
+const { unregisterUser } = require('../utils/unregister');
 
 async function updateInscriptionMessages(knex, client) {
     const messages = await knex('inscription_messages').select('*');
@@ -10,27 +11,11 @@ async function updateInscriptionMessages(knex, client) {
         return;
     }
 
-    const row = new ActionRowBuilder()
-        .addComponents(
-            new StringSelectMenuBuilder()
-                .setCustomId('select_team')
-                .setPlaceholder('Choisissez votre équipe')
-                .addOptions(
-                    teams.map(team => ({
-                        label: team.label,
-                        value: team.id.toString(),
-                    }))
-                ),
-        );
-
     for (const msg of messages) {
         try {
             const channel = await client.channels.fetch(msg.channel_id);
             const message = await channel.messages.fetch(msg.message_id);
-            await message.edit({
-                content: 'Choisissez votre équipe pour vous inscrire.',
-                components: [row]
-            });
+            await message.edit(buildInscriptionMessage(teams));
         } catch (error) {
             console.error('Erreur mise à jour message:', error);
         }
@@ -197,46 +182,9 @@ module.exports = {
 
                 // 2. Désincrire tous les utilisateurs de l'équipe
                 const teamUsers = await knex('users').where('team_id', team.id).select('*');
-                const { inscrit_role_id: inscritRoleId } = await knex('app_state').first();
-
                 for (const user of teamUsers) {
-                    // Retirer les rôles Discord (le membre a pu quitter le serveur)
-                    try {
-                        const member = await interaction.guild.members.fetch(user.discord_id).catch(() => null);
-                        if (member) {
-                            const rolesToRemove = [];
-
-                            // Rôle de l'équipe
-                            const teamRole = interaction.guild.roles.cache.get(team.role_id);
-                            if (teamRole && member.roles.cache.has(teamRole.id)) {
-                                rolesToRemove.push(teamRole);
-                            }
-
-                            // Rôle "inscrit"
-                            if (inscritRoleId && member.roles.cache.has(inscritRoleId)) {
-                                rolesToRemove.push(inscritRoleId);
-                            }
-
-                            if (rolesToRemove.length > 0) {
-                                await member.roles.remove(rolesToRemove);
-                            }
-                        }
-                    } catch (roleError) {
-                        console.error(`Erreur retrait rôles ${user.discord_id}:`, roleError);
-                    }
-
-                    // Désincrire sur Minecraft
-                    try {
-                        await sendMinecraftCommand(process.env.PT_SERVER_ID, `authme unregister ${user.minecraft_username}`);
-                        await sendMinecraftCommand(process.env.PT_SERVER_ID, `tteamunregister ${user.minecraft_username}`);
-                        await sendMinecraftCommand(process.env.PT_SERVER_ID, `kick ${user.minecraft_username}`);
-                    } catch (mcError) {
-                        console.error(`Erreur désinscription Minecraft ${user.minecraft_username}:`, mcError);
-                    }
+                    await unregisterUser(interaction.guild, knex, user);
                 }
-
-                // Supprimer les utilisateurs de la BDD
-                await knex('users').where('team_id', team.id).delete();
 
                 // 3. Supprimer la catégorie et tous ses canaux (si elle existe)
                 if (team.category_id) {

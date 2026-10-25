@@ -1,4 +1,25 @@
-const { MessageFlags } = require('discord.js');
+const { MessageFlags, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+
+// Formulaire d'inscription : menu de choix d'équipe
+function buildInscriptionMessage(teams) {
+    const row = new ActionRowBuilder()
+        .addComponents(
+            new StringSelectMenuBuilder()
+                .setCustomId('select_team')
+                .setPlaceholder('Choisissez votre équipe')
+                .addOptions(
+                    teams.map(team => ({
+                        label: team.label,
+                        value: team.id.toString(),
+                    }))
+                ),
+        );
+
+    return {
+        content: 'Choisissez votre équipe pour vous inscrire.',
+        components: [row]
+    };
+}
 
 async function sendLoginInstructions(user, password) {
     try {
@@ -20,4 +41,4 @@ async function replyError(interaction, error, content = `Erreur: ${error.message
     await interaction[method](payload).catch(console.error);
 }
 
-module.exports = { sendLoginInstructions, replyError, INSCRIPTION_ERROR };
+module.exports = { sendLoginInstructions, replyError, buildInscriptionMessage, INSCRIPTION_ERROR };

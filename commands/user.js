@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
-const { sendMinecraftCommand } = require('../utils/pterodactyl');
+const { unregisterUser } = require('../utils/unregister');
 const { replyError } = require('../utils/messages');
 
 module.exports = {
@@ -129,44 +129,9 @@ module.exports = {
                     return;
                 }
 
-                const minecraftUsername = userData.minecraft_username;
+                await unregisterUser(interaction.guild, knex, userData);
 
-                // Supprimer de la BDD
-                await knex('users').where('discord_id', user.id).delete();
-
-                // Désenregistrer et kick sur Minecraft
-                try {
-                    await sendMinecraftCommand(process.env.PT_SERVER_ID, `authme unregister ${minecraftUsername}`);
-                    await sendMinecraftCommand(process.env.PT_SERVER_ID, `tteamunregister ${minecraftUsername}`);
-                    await sendMinecraftCommand(process.env.PT_SERVER_ID, `kick ${minecraftUsername}`);
-                } catch (error) {
-                    console.error('Erreur commandes Minecraft:', error.message);
-                }
-
-                // Retirer les rôles Discord (le membre a pu quitter le serveur)
-                const member = await interaction.guild.members.fetch(user.id).catch(() => null);
-                if (member) {
-                    const teams = await knex('teams').select('role_id');
-                    const { inscrit_role_id: inscritRoleId } = await knex('app_state').first();
-
-                    const rolesToRemove = [];
-                    teams.forEach(t => {
-                        const role = interaction.guild.roles.cache.get(t.role_id);
-                        if (role && member.roles.cache.has(role.id)) {
-                            rolesToRemove.push(role);
-                        }
-                    });
-
-                    if (inscritRoleId && member.roles.cache.has(inscritRoleId)) {
-                        rolesToRemove.push(inscritRoleId);
-                    }
-
-                    if (rolesToRemove.length > 0) {
-                        await member.roles.remove(rolesToRemove);
-                    }
-                }
-
-                await interaction.reply({ content: `Utilisateur <@${user.id}> (**${minecraftUsername}**) désenregistré` });
+                await interaction.reply({ content: `Utilisateur <@${user.id}> (**${userData.minecraft_username}**) désenregistré` });
             } catch (error) {
                 await replyError(interaction, error);
             }
