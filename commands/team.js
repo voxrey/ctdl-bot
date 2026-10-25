@@ -46,11 +46,22 @@ module.exports = {
                 .addStringOption(option =>
                     option.setName('nom')
                         .setDescription('Nom de l\'équipe')
+                        .setAutocomplete(true)
                         .setRequired(true)))
         .addSubcommand(subcommand =>
             subcommand
                 .setName('stats')
                 .setDescription('Affiche les statistiques d\'inscription')),
+
+    // Propose les équipes existantes dont le nom contient la saisie (25 max, limite Discord)
+    async autocomplete(interaction, knex) {
+        const focused = interaction.options.getFocused().toLowerCase();
+        const teams = await knex('teams')
+            .whereRaw('instr(lower(label), ?) > 0', focused)
+            .orderBy('label')
+            .limit(25);
+        await interaction.respond(teams.map(team => ({ name: team.label, value: team.label })));
+    },
 
     async execute(interaction, knex, client) {
         const subcommand = interaction.options.getSubcommand();
@@ -181,7 +192,7 @@ module.exports = {
                 await interaction.deferReply();
 
                 // 1. Récupérer les infos de l'équipe
-                const team = await knex('teams').where('label', nom).first();
+                const team = await knex('teams').whereRaw('lower(label) = ?', nom.toLowerCase()).first();
 
                 if (!team) {
                     await interaction.editReply({ content: `Équipe **${nom}** non trouvée` });
@@ -235,20 +246,20 @@ module.exports = {
                 }
 
                 // 5. Supprimer l'équipe de la base de données
-                await knex('teams').where('label', nom).delete();
+                await knex('teams').where('id', team.id).delete();
 
                 // 6. Mettre à jour les messages d'inscription
                 await updateInscriptionMessages(knex, client);
 
                 // 7. Envoyer la commande Minecraft
                 try {
-                    await sendMinecraftCommand(process.env.PT_SERVER_ID, `teama disband ${nom}`);
+                    await sendMinecraftCommand(process.env.PT_SERVER_ID, `teama disband ${team.label}`);
                 } catch (mcError) {
                     console.error('Erreur commande Minecraft:', mcError);
                 }
 
                 await interaction.editReply({
-                    content: `✅ Équipe **${nom}** supprimée avec succès!\n` +
+                    content: `✅ Équipe **${team.label}** supprimée avec succès!\n` +
                              `- ${teamUsers.length} utilisateur(s) désinscrit(s)\n` +
                              `- Rôle supprimé\n` +
                              `- Catégorie et canaux supprimés\n` +

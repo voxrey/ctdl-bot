@@ -149,6 +149,11 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
+    if (interaction.isAutocomplete()) {
+        const command = commands.get(interaction.commandName);
+        await command?.autocomplete?.(interaction, knex).catch(error => console.error('Erreur autocomplétion:', error));
+    }
+
     if (interaction.isStringSelectMenu()) {
         if (interaction.customId === 'select_team') {
             const selectedTeamId = interaction.values[0];
