@@ -179,9 +179,9 @@ module.exports = {
                 const inscritRoleIds = inscriptionMsgs.map(msg => msg.inscrit_role_id).filter(Boolean);
 
                 for (const user of teamUsers) {
+                    // Retirer les rôles Discord (le membre a pu quitter le serveur)
                     try {
-                        // Retirer les rôles Discord
-                        const member = await interaction.guild.members.fetch(user.discord_id);
+                        const member = await interaction.guild.members.fetch(user.discord_id).catch(() => null);
                         if (member) {
                             const rolesToRemove = [];
 
@@ -203,13 +203,17 @@ module.exports = {
                                 await member.roles.remove(rolesToRemove);
                             }
                         }
+                    } catch (roleError) {
+                        console.error(`Erreur retrait rôles ${user.discord_id}:`, roleError);
+                    }
 
-                        // Désincrire sur Minecraft
+                    // Désincrire sur Minecraft
+                    try {
                         await sendMinecraftCommand(process.env.PT_SERVER_ID, `authme unregister ${user.minecraft_username}`);
                         await sendMinecraftCommand(process.env.PT_SERVER_ID, `tteamunregister ${user.minecraft_username}`);
-                        await sendMinecraftCommand(process.env.PT_SERVER_ID, `kick ${minecraftUsername}`);
-                    } catch (userError) {
-                        console.error(`Erreur désinscription ${user.minecraft_username}:`, userError);
+                        await sendMinecraftCommand(process.env.PT_SERVER_ID, `kick ${user.minecraft_username}`);
+                    } catch (mcError) {
+                        console.error(`Erreur désinscription Minecraft ${user.minecraft_username}:`, mcError);
                     }
                 }
 
