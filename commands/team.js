@@ -175,8 +175,7 @@ module.exports = {
 
                 // 2. Désincrire tous les utilisateurs de l'équipe
                 const teamUsers = await knex('users').where('team_id', team.id).select('*');
-                const inscriptionMsgs = await knex('inscription_messages').select('inscrit_role_id');
-                const inscritRoleIds = inscriptionMsgs.map(msg => msg.inscrit_role_id).filter(Boolean);
+                const { inscrit_role_id: inscritRoleId } = await knex('app_state').first();
 
                 for (const user of teamUsers) {
                     // Retirer les rôles Discord (le membre a pu quitter le serveur)
@@ -191,13 +190,10 @@ module.exports = {
                                 rolesToRemove.push(teamRole);
                             }
 
-                            // Rôle(s) "inscrit"
-                            inscritRoleIds.forEach(roleId => {
-                                const inscritRole = interaction.guild.roles.cache.get(roleId);
-                                if (inscritRole && member.roles.cache.has(inscritRole.id)) {
-                                    rolesToRemove.push(inscritRole);
-                                }
-                            });
+                            // Rôle "inscrit"
+                            if (inscritRoleId && member.roles.cache.has(inscritRoleId)) {
+                                rolesToRemove.push(inscritRoleId);
+                            }
 
                             if (rolesToRemove.length > 0) {
                                 await member.roles.remove(rolesToRemove);
@@ -293,8 +289,7 @@ module.exports = {
                     .leftJoin('teams', 'users.team_id', 'teams.id')
                     .select('users.discord_id', 'teams.label as team_label', 'teams.role_id as team_role_id');
 
-                const inscriptionMsgs = await knex('inscription_messages').select('inscrit_role_id');
-                const inscritRoleIds = inscriptionMsgs.map(msg => msg.inscrit_role_id).filter(Boolean);
+                const { inscrit_role_id: inscritRoleId } = await knex('app_state').first();
 
                 const statsByTeam = {};
                 users.forEach(u => {
@@ -310,8 +305,7 @@ module.exports = {
 
                 const allMembers = await interaction.guild.members.fetch();
                 const nonInscrits = allMembers.filter(member => {
-                    const hasInscritRole = inscritRoleIds.some(roleId => member.roles.cache.has(roleId));
-                    return !hasInscritRole && !member.user.bot;
+                    return !member.roles.cache.has(inscritRoleId) && !member.user.bot;
                 }).size;
 
                 const sections = Object.keys(statsByTeam).sort().map(team => {

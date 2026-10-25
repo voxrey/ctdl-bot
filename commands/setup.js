@@ -55,9 +55,9 @@ module.exports = {
             if (message) {
                 await knex('inscription_messages').insert({
                     channel_id: channel.id,
-                    message_id: message.id,
-                    inscrit_role_id: roleInscrit ? roleInscrit.id : null
+                    message_id: message.id
                 });
+                await knex('app_state').update({ inscrit_role_id: roleInscrit.id });
                 await interaction.reply({ content: `Formulaire envoyé dans <#${channel.id}>`, flags: MessageFlags.Ephemeral });
             }
         } catch (error) {

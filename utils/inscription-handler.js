@@ -50,17 +50,13 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
             await sendLoginInstructions(interaction.user, password);
         }
 
-        const inscriptionMsg = await knex('inscription_messages')
-            .where('channel_id', interaction.channel.id)
-            .first();
-
         const rolesToAdd = [];
 
         const teamRole = interaction.guild.roles.cache.get(team.role_id);
         if (teamRole) rolesToAdd.push(teamRole);
 
-        if (inscriptionMsg && inscriptionMsg.inscrit_role_id) {
-            const inscritRole = interaction.guild.roles.cache.get(inscriptionMsg.inscrit_role_id);
+        if (appState && appState.inscrit_role_id) {
+            const inscritRole = interaction.guild.roles.cache.get(appState.inscrit_role_id);
             if (inscritRole) rolesToAdd.push(inscritRole);
         }
 

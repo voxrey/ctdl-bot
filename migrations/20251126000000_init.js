@@ -33,13 +33,13 @@ exports.up = async function(knex) {
     table.increments('id').primary();
     table.string('channel_id').notNullable();
     table.string('message_id').notNullable();
-    table.string('inscrit_role_id');
     table.timestamps(true, true);
   });
 
   await knex.schema.createTable('app_state', function(table) {
     table.increments('id').primary();
     table.boolean('release').defaultTo(false);
+    table.string('inscrit_role_id'); // Rôle "Inscrit", défini par /setup
   });
 };
 

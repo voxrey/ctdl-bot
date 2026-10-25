@@ -146,7 +146,7 @@ module.exports = {
                 const member = await interaction.guild.members.fetch(user.id).catch(() => null);
                 if (member) {
                     const teams = await knex('teams').select('role_id');
-                    const inscriptionMsgs = await knex('inscription_messages').select('inscrit_role_id');
+                    const { inscrit_role_id: inscritRoleId } = await knex('app_state').first();
 
                     const rolesToRemove = [];
                     teams.forEach(t => {
@@ -156,14 +156,9 @@ module.exports = {
                         }
                     });
 
-                    inscriptionMsgs.forEach(msg => {
-                        if (msg.inscrit_role_id) {
-                            const role = interaction.guild.roles.cache.get(msg.inscrit_role_id);
-                            if (role && member.roles.cache.has(role.id)) {
-                                rolesToRemove.push(role);
-                            }
-                        }
-                    });
+                    if (inscritRoleId && member.roles.cache.has(inscritRoleId)) {
+                        rolesToRemove.push(inscritRoleId);
+                    }
 
                     if (rolesToRemove.length > 0) {
                         await member.roles.remove(rolesToRemove);
