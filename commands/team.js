@@ -80,6 +80,13 @@ module.exports = {
                 return;
             }
 
+            // Le menu du formulaire d'inscription est limité à 25 options par Discord
+            const { count } = await knex('teams').count('* as count').first();
+            if (count >= 25) {
+                await interaction.reply({ content: '❌ Maximum 25 équipes : c\'est la limite du menu de choix d\'équipe de Discord', flags: MessageFlags.Ephemeral });
+                return;
+            }
+
             // Éléments Discord créés, à supprimer si une étape échoue
             const created = [];
 
