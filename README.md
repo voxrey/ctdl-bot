@@ -20,6 +20,7 @@ GUILD_ID=        # id du serveur Discord du bot
 PT_HOST=
 PT_TOKEN=
 PT_SERVER_ID=
+MC_QUEUE_INTERVAL=30   # secondes entre deux envois de la file Minecraft
 
 # Affichés dans le MP de connexion
 MC_ADDRESS=mc.bde-imtbs-tsp.fr
@@ -27,6 +28,8 @@ MC_VERSION=1.21.x
 ```
 
 Si une des variables `PT_*` est vide, les commandes Minecraft ne sont pas envoyées, elles sont juste affichées dans la console (`[MC simulé] ...`). Pratique pour tester sans serveur.
+
+Quand le serveur Minecraft est éteint, les commandes du bot sont mises en file (table `mc_commands`) et envoyées dans l'ordre à son retour : toutes les `MC_QUEUE_INTERVAL` secondes et avant chaque nouvelle commande. `/mc pending` affiche la file. Les commandes contenant un mot de passe ne sont jamais mises en file : l'inscription et `/password` sont refusées tant que le serveur est indisponible, et les `kick` sont abandonnés.
 
 Le bot a besoin des intents privilégiés **Server Members** et **Message Content** (à activer sur le portail développeur Discord), et des permissions pour gérer les rôles, les salons et déplacer des membres.
 
@@ -62,6 +65,7 @@ Toutes réservées aux administrateurs, sauf `/password`.
 | `/setup` | Poste le formulaire d'inscription |
 | `/tuto [salon]` | Salon de tutoriel du message de bienvenue |
 | `/release [active]` | Affiche ou change le mode release |
+| `/mc pending` | Commandes Minecraft en attente |
 | `/password [mot_de_passe]` | Nouveau mot de passe Minecraft (joueurs inscrits) |
 
 ## Migrations

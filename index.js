@@ -34,7 +34,7 @@ for (const file of commandFiles) {
 
 const { handleInscription } = require('./utils/inscription-handler');
 const { replyError, buildWelcomeMessage, INSCRIPTION_ERROR } = require('./utils/messages');
-const { sendMinecraftCommand, getServerState } = require('./utils/pterodactyl');
+const { runMinecraftCommands, flushQueue } = require('./utils/mc-queue');
 
 // Supprime les salons temporaires vidés ou supprimés pendant que le bot était éteint
 async function cleanTempChannels() {
@@ -67,7 +67,9 @@ client.once('clientReady', async () => {
         await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
         console.log(`Connecté: ${client.user.tag}`);
 
-        await sendMinecraftCommand(process.env.PT_SERVER_ID, 'say Bot connecté');
+        // Vide aussi la file restée en attente avant le redémarrage
+        await runMinecraftCommands(knex, ['say Bot connecté'], 'optional');
+        setInterval(() => flushQueue(knex).catch(console.error), (Number(process.env.MC_QUEUE_INTERVAL) || 30) * 1000);
     } catch (error) {
         console.error('Erreur:', error);
     }

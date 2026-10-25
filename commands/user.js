@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
 const { unregisterUser } = require('../utils/unregister');
-const { replyError } = require('../utils/messages');
+const { replyError, MC_PENDING } = require('../utils/messages');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -130,9 +130,9 @@ module.exports = {
 
                 // Les commandes Minecraft peuvent dépasser les 3 s laissées par Discord pour répondre
                 await interaction.deferReply();
-                await unregisterUser(interaction.guild, knex, userData);
+                const sent = await unregisterUser(interaction.guild, knex, userData);
 
-                await interaction.editReply({ content: `Utilisateur <@${user.id}> (**${userData.minecraft_username}**) désenregistré` });
+                await interaction.editReply({ content: `Utilisateur <@${user.id}> (**${userData.minecraft_username}**) désenregistré` + (sent ? '' : `\n${MC_PENDING}`) });
             } catch (error) {
                 await replyError(interaction, error);
             }

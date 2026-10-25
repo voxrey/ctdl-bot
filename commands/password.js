@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { generatePassword, PASSWORD_REGEX } = require('../utils/password');
 const { passwordMessage, replyError, MC_UNAVAILABLE } = require('../utils/messages');
-const { sendMinecraftCommand } = require('../utils/pterodactyl');
+const { runMinecraftCommands } = require('../utils/mc-queue');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -31,7 +31,7 @@ module.exports = {
             const password = chosen || generatePassword();
             await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             try {
-                await sendMinecraftCommand(process.env.PT_SERVER_ID, `authme password ${user.minecraft_username} ${password}`);
+                await runMinecraftCommands(knex, [`authme password ${user.minecraft_username} ${password}`], 'direct');
             } catch (mcError) {
                 console.error('Erreur changement mot de passe:', mcError.message);
                 await interaction.editReply({ content: MC_UNAVAILABLE });

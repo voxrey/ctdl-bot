@@ -51,6 +51,8 @@ function passwordMessage(password) {
     return `Votre mot de passe Minecraft : \`${password}\`\nNotez-le, il ne sera plus affiché. \`/password\` pour en générer un nouveau ou choisir le vôtre.`;
 }
 
+const MC_PENDING = '⏳ Serveur Minecraft indisponible : les commandes sont en file et partiront à son retour.';
+
 const MC_UNAVAILABLE = 'Le serveur Minecraft est indisponible pour le moment, réessayez dans quelques minutes.';
 
 // Message montré aux joueurs : le détail technique reste dans les logs
@@ -63,4 +65,4 @@ async function replyError(interaction, error, content = `Erreur: ${error.message
     await interaction[method](payload).catch(console.error);
 }
 
-module.exports = { buildWelcomeMessage, sendLoginInstructions, passwordMessage, replyError, buildInscriptionMessage, INSCRIPTION_ERROR, MC_UNAVAILABLE };
+module.exports = { buildWelcomeMessage, sendLoginInstructions, passwordMessage, replyError, buildInscriptionMessage, INSCRIPTION_ERROR, MC_PENDING, MC_UNAVAILABLE };

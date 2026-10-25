@@ -1,14 +1,10 @@
-const { sendMinecraftCommand } = require('./pterodactyl');
+const { runMinecraftCommands } = require('./mc-queue');
 
-// Désinscrit un joueur : Minecraft, rôles Discord (équipes + "Inscrit") et base
+// Désinscrit un joueur : Minecraft, rôles Discord (équipes + "Inscrit") et base.
+// Renvoie false si la désinscription Minecraft est restée en file
 async function unregisterUser(guild, knex, user) {
-    try {
-        await sendMinecraftCommand(process.env.PT_SERVER_ID, `authme unregister ${user.minecraft_username}`);
-        await sendMinecraftCommand(process.env.PT_SERVER_ID, `tteamunregister ${user.minecraft_username}`);
-        await sendMinecraftCommand(process.env.PT_SERVER_ID, `kick ${user.minecraft_username}`);
-    } catch (mcError) {
-        console.error(`Erreur désinscription Minecraft ${user.minecraft_username}:`, mcError);
-    }
+    const sent = await runMinecraftCommands(knex, [`authme unregister ${user.minecraft_username}`, `tteamunregister ${user.minecraft_username}`]);
+    await runMinecraftCommands(knex, [`kick ${user.minecraft_username}`], 'optional');
 
     // Le membre a pu quitter le serveur
     try {
@@ -28,6 +24,7 @@ async function unregisterUser(guild, knex, user) {
     }
 
     await knex('users').where('discord_id', user.discord_id).delete();
+    return sent;
 }
 
 module.exports = { unregisterUser };

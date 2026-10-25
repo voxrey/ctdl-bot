@@ -35,6 +35,13 @@ exports.up = async function(knex) {
     table.timestamps(true, true);
   });
 
+  // File des commandes Minecraft envoyées quand le serveur est disponible (jamais de mot de passe)
+  await knex.schema.createTable('mc_commands', function(table) {
+    table.increments('id').primary();
+    table.string('command').notNullable();
+    table.timestamp('created_at').defaultTo(knex.fn.now());
+  });
+
   await knex.schema.createTable('app_state', function(table) {
     table.increments('id').primary();
     table.boolean('release').defaultTo(false);
@@ -49,6 +56,7 @@ exports.up = async function(knex) {
  */
 exports.down = async function(knex) {
   await knex.schema.dropTable('app_state');
+  await knex.schema.dropTable('mc_commands');
   await knex.schema.dropTable('inscription_messages');
   await knex.schema.dropTable('temp_channels');
   await knex.schema.dropTable('trigger_channels');

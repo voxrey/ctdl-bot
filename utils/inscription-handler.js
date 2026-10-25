@@ -1,7 +1,7 @@
 const { MessageFlags } = require('discord.js');
 const { generatePassword } = require('./password');
 const { sendLoginInstructions, passwordMessage, replyError, INSCRIPTION_ERROR, MC_UNAVAILABLE } = require('./messages');
-const { sendMinecraftCommand } = require('./pterodactyl');
+const { runMinecraftCommands } = require('./mc-queue');
 
 async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
     const discordId = interaction.user.id;
@@ -51,12 +51,11 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
     try {
         await knex('users').insert({ discord_id: discordId, minecraft_username: pseudo, team_id: team.id });
 
-        // `authme password` après `register` : fixe le mot de passe même si le compte AuthMe existait déjà
+        // `authme password` après `register` : fixe le mot de passe même si le compte AuthMe existait déjà.
+        // Mode direct : une commande avec mot de passe n'est jamais mise en file (rien n'est stocké)
         const password = generatePassword();
         try {
-            await sendMinecraftCommand(process.env.PT_SERVER_ID, `authme register ${pseudo} ${password}`);
-            await sendMinecraftCommand(process.env.PT_SERVER_ID, `authme password ${pseudo} ${password}`);
-            await sendMinecraftCommand(process.env.PT_SERVER_ID, `tteamregister ${pseudo} ${team.label}`);
+            await runMinecraftCommands(knex, [`authme register ${pseudo} ${password}`, `authme password ${pseudo} ${password}`], 'direct');
         } catch (mcError) {
             // Sans compte Minecraft, le mot de passe affiché serait inutilisable : on annule l'inscription
             console.error('Erreur enregistrement Minecraft:', mcError.message);
@@ -64,6 +63,8 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
             await interaction.editReply({ content: MC_UNAVAILABLE });
             return;
         }
+
+        await runMinecraftCommands(knex, [`tteamregister ${pseudo} ${team.label}`]);
 
         const isRelease = appState && appState.release;
 

@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, PermissionsBitField, ChannelType, MessageFlags } = require('discord.js');
-const { sendMinecraftCommand } = require('../utils/pterodactyl');
-const { replyError, buildInscriptionMessage } = require('../utils/messages');
+const { runMinecraftCommands } = require('../utils/mc-queue');
+const { replyError, buildInscriptionMessage, MC_PENDING } = require('../utils/messages');
 const { unregisterUser } = require('../utils/unregister');
 
 async function updateInscriptionMessages(knex, client) {
@@ -158,17 +158,14 @@ module.exports = {
                 await updateInscriptionMessages(knex, client);
 
                 // 8. Envoyer la commande Minecraft
-                try {
-                    await sendMinecraftCommand(process.env.PT_SERVER_ID, `teama create ${nom}`);
-                } catch (mcError) {
-                    console.error('Erreur commande Minecraft:', mcError);
-                }
+                const sent = await runMinecraftCommands(knex, [`teama create ${nom}`]);
 
                 await interaction.editReply({
                     content: `✅ Équipe **${nom}** créée avec succès!\n` +
                              `- Rôle: <@&${role.id}>\n` +
                              `- Catégorie: ${category.name}\n` +
-                             `- Salon vocal ajouté comme trigger channel`
+                             `- Salon vocal ajouté comme trigger channel` +
+                             (sent ? '' : `\n${MC_PENDING}`)
                 });
             } catch (error) {
                 console.error('Erreur création équipe:', error);
@@ -201,8 +198,9 @@ module.exports = {
 
                 // 2. Désincrire tous les utilisateurs de l'équipe
                 const teamUsers = await knex('users').where('team_id', team.id).select('*');
+                let sent = true;
                 for (const user of teamUsers) {
-                    await unregisterUser(interaction.guild, knex, user);
+                    sent = await unregisterUser(interaction.guild, knex, user) && sent;
                 }
 
                 // 3. Supprimer la catégorie et tous ses canaux (si elle existe)
@@ -252,18 +250,15 @@ module.exports = {
                 await updateInscriptionMessages(knex, client);
 
                 // 7. Envoyer la commande Minecraft
-                try {
-                    await sendMinecraftCommand(process.env.PT_SERVER_ID, `teama disband ${team.label}`);
-                } catch (mcError) {
-                    console.error('Erreur commande Minecraft:', mcError);
-                }
+                sent = await runMinecraftCommands(knex, [`teama disband ${team.label}`]) && sent;
 
                 await interaction.editReply({
                     content: `✅ Équipe **${team.label}** supprimée avec succès!\n` +
                              `- ${teamUsers.length} utilisateur(s) désinscrit(s)\n` +
                              `- Rôle supprimé\n` +
                              `- Catégorie et canaux supprimés\n` +
-                             `- Trigger channels retirés de la BDD`
+                             `- Trigger channels retirés de la BDD` +
+                             (sent ? '' : `\n${MC_PENDING}`)
                 });
             } catch (error) {
                 console.error('Erreur suppression équipe:', error);
