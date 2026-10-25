@@ -1,84 +1,71 @@
 # Bot Discord CTDL
 
-Ce bot gère des salons vocaux temporaires et un système d'inscription avec choix d'équipe et enregistrement de pseudo Minecraft.
-
-## Prérequis
-
-- Node.js installé
-- Une base de données SQLite (gérée automatiquement)
+Bot qui fait le lien entre le Discord et le serveur Minecraft du CTDL : inscription des joueurs par équipe, création des comptes AuthMe, gestion des équipes et salons vocaux temporaires.
 
 ## Installation
 
-1.  Installez les dépendances :
-    ```bash
-    npm install
-    ```
-
-## Configuration (`config.json`)
-
-Le fichier `config.json` doit contenir les informations suivantes :
-
-```json
-{
-  "token": "VOTRE_TOKEN_DISCORD",
-  "triggerChannelIds": ["ID_SALON_VOCAL_1", "ID_SALON_VOCAL_2"],
-  "teams": [
-    { "label": "Équipe 1", "value": "team_1", "roleId": "ID_ROLE_EQUIPE_1" },
-    { "label": "Équipe 2", "value": "team_2", "roleId": "ID_ROLE_EQUIPE_2" },
-    ...
-  ]
-}
-```
-
-*   **token** : Le token de votre bot Discord.
-*   **triggerChannelIds** : Une liste d'IDs de salons vocaux. Quand un utilisateur rejoint l'un de ces salons, un salon temporaire est créé pour lui.
-*   **teams** : La configuration des équipes pour le système d'inscription.
-    *   `label` : Le nom affiché dans le menu déroulant.
-    *   `value` : L'identifiant interne de l'équipe (ne pas changer sauf si nécessaire).
-    *   `roleId` : **IMPORTANT** : Remplacez `REMPLACER_PAR_ID_ROLE_X` par l'ID réel du rôle Discord correspondant à cette équipe.
-
-## Base de Données et Migrations
-
-Ce projet utilise **Knex.js** pour gérer la base de données SQLite et ses évolutions (migrations).
-
-### Fonctionnement automatique
-
-À chaque démarrage du bot (`npm run dev` ou `node index.js`), le système vérifie automatiquement si de nouvelles migrations doivent être appliquées et les exécute. Vous n'avez généralement rien à faire manuellement.
-
-### Créer une nouvelle migration
-
-Si vous devez modifier la structure de la base de données (par exemple, ajouter une colonne), créez une nouvelle migration :
+Node.js 22 requis.
 
 ```bash
-npx knex migrate:make nom_de_la_modification
+npm install
 ```
-*Exemple : `npx knex migrate:make add_points_column`*
 
-Cela va créer un fichier dans le dossier `migrations/`. Ouvrez-le et définissez les changements :
+Créer un fichier `.env` à la racine :
 
-*   `up` : Ce qui doit être fait (ex: `table.integer('points')`).
-*   `down` : Ce qui doit être fait pour annuler (ex: `table.dropColumn('points')`).
+```env
+DISCORD_TOKEN=
 
-### Commandes utiles
+# Pterodactyl, laisser vide en local
+PT_HOST=
+PT_TOKEN=
+PT_SERVER_ID=
+```
 
-*   **Appliquer les migrations manuellement** :
-    ```bash
-    npx knex migrate:latest
-    ```
+Si une des variables `PT_*` est vide, les commandes Minecraft ne sont pas envoyées, elles sont juste affichées dans la console (`[MC simulé] ...`). Pratique pour tester sans serveur.
 
-*   **Annuler la dernière migration** (en cas d'erreur) :
-    ```bash
-    npx knex migrate:rollback
-    ```
+Le bot a besoin des intents privilégiés **Server Members** et **Message Content** (à activer sur le portail développeur Discord), et des permissions pour gérer les rôles, les salons et déplacer des membres.
 
 ## Lancement
 
-Pour lancer le bot :
+```bash
+npm run dev   # avec rechargement auto
+npm start
+```
+
+La base SQLite (`db/database.db`) est créée et migrée automatiquement au démarrage.
+
+## Mise en place sur un serveur
+
+1. `/team add nom:<équipe>` pour chaque équipe (crée le rôle, la catégorie privée, un salon texte et un vocal « Créer un salon »)
+2. `/setup channel:<salon> role_inscrit:<rôle>` pour poster le formulaire d'inscription
+3. Le jour J, `/release active:true` envoie à chaque inscrit ses identifiants de connexion en MP
+
+## Commandes
+
+Toutes réservées aux administrateurs.
+
+| Commande | |
+|---|---|
+| `/team list\|add\|remove\|stats` | Équipes et statistiques d'inscription |
+| `/user list\|info\|unregister` | Joueurs inscrits |
+| `/channel list\|add\|remove` | Salons vocaux qui créent un salon temporaire |
+| `/setup` | Poste le formulaire d'inscription |
+| `/release [active]` | Affiche ou change le mode release |
+
+## Migrations
 
 ```bash
-npm run dev
+npx knex migrate:make nom_de_la_migration
+npx knex migrate:latest
+npx knex migrate:rollback
 ```
-ou
+
+## Déploiement
+
+Un service systemd est fourni dans `ctdl.service` (à adapter : chemin, utilisateur, version de Node).
+
 ```bash
-node index.js
+sudo cp ctdl.service /etc/systemd/system/
+sudo systemctl enable --now ctdl
+journalctl -u ctdl -f
 ```
