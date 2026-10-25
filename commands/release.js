@@ -22,7 +22,7 @@ module.exports = {
             } else if (activeOption === true) {
                 await interaction.deferReply();
 
-                const users = await knex('users').select('discord_id', 'password');
+                const users = await knex('users').select('discord_id');
 
                 let successCount = 0;
                 const failedUsers = [];
@@ -30,7 +30,7 @@ module.exports = {
                 for (const user of users) {
                     try {
                         const discordUser = await client.users.fetch(user.discord_id);
-                        const success = await sendLoginInstructions(discordUser, user.password);
+                        const success = await sendLoginInstructions(discordUser);
                         if (success) {
                             successCount++;
                         } else {
@@ -44,7 +44,7 @@ module.exports = {
 
                 await knex('app_state').update({ release: true });
 
-                let message = `Mode release activé.\nMots de passe envoyés: ${successCount} réussis, ${failedUsers.length} échoués`;
+                let message = `Mode release activé.\nInstructions de connexion envoyées: ${successCount} réussis, ${failedUsers.length} échoués`;
                 if (failedUsers.length > 0) {
                     const failedMentions = failedUsers.map(id => `<@${id}>`).join(', ');
                     message += `\n\n**Échecs:** ${failedMentions}`;

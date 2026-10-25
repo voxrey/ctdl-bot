@@ -15,7 +15,6 @@ exports.up = async function(knex) {
     table.string('discord_id').primary();
     table.string('minecraft_username');
     table.integer('team_id').unsigned().references('id').inTable('teams').onDelete('SET NULL');
-    table.string('password', 6);
   });
 
   await knex.schema.createTable('trigger_channels', function(table) {

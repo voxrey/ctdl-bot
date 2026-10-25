@@ -1,6 +1,6 @@
 const { MessageFlags } = require('discord.js');
 const { generatePassword } = require('./password');
-const { sendLoginInstructions, replyError, INSCRIPTION_ERROR } = require('./messages');
+const { sendLoginInstructions, passwordMessage, replyError, INSCRIPTION_ERROR, MC_UNAVAILABLE } = require('./messages');
 const { sendMinecraftCommand } = require('./pterodactyl');
 
 async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
@@ -46,33 +46,37 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
     }
 
     try {
+        await knex('users').insert({ discord_id: discordId, minecraft_username: pseudo, team_id: team.id });
+
+        // `authme password` après `register` : fixe le mot de passe même si le compte AuthMe existait déjà
         const password = generatePassword();
-
-        await knex('users')
-            .insert({ discord_id: discordId, minecraft_username: pseudo, team_id: team.id, password: password })
-            .onConflict('discord_id')
-            .merge();
-
-        // Enregistrer le joueur sur le serveur Minecraft
         try {
             await sendMinecraftCommand(process.env.PT_SERVER_ID, `authme register ${pseudo} ${password}`);
+            await sendMinecraftCommand(process.env.PT_SERVER_ID, `authme password ${pseudo} ${password}`);
             await sendMinecraftCommand(process.env.PT_SERVER_ID, `tteamregister ${pseudo} ${team.label}`);
-        } catch (error) {
-            console.error('Erreur enregistrement Minecraft:', error.message);
+        } catch (mcError) {
+            // Sans compte Minecraft, le mot de passe affiché serait inutilisable : on annule l'inscription
+            console.error('Erreur enregistrement Minecraft:', mcError.message);
+            await knex('users').where('discord_id', discordId).delete();
+            await interaction.reply({ content: MC_UNAVAILABLE, flags: MessageFlags.Ephemeral });
+            return;
         }
 
         const isRelease = appState && appState.release;
 
         if (isRelease) {
-            await sendLoginInstructions(interaction.user, password);
+            await sendLoginInstructions(interaction.user);
         }
 
         await interaction.member.roles.add([teamRole, inscritRole].filter(Boolean));
 
         const dmMessage = isRelease
-            ? '\nVous avez reçu les instructions de connexion par DM.'
-            : '\nVous recevrez les instructions de connexion par DM ultérieurement.';
-        await interaction.reply({ content: `Inscrit dans **${team.label}** avec le pseudo **${pseudo}**${dmMessage}`, flags: MessageFlags.Ephemeral });
+            ? 'Vous avez reçu les instructions de connexion par DM.'
+            : 'Vous recevrez les instructions de connexion par DM à l\'ouverture du serveur.';
+        await interaction.reply({
+            content: `Inscrit dans **${team.label}** avec le pseudo **${pseudo}**\n\n${passwordMessage(password)}\n\n${dmMessage}`,
+            flags: MessageFlags.Ephemeral
+        });
     } catch (err) {
         console.error('Erreur inscription:', err);
         await replyError(interaction, err, INSCRIPTION_ERROR);

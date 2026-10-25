@@ -42,11 +42,15 @@ La base SQLite (`db/database.db`) est créée et migrée automatiquement au dém
 
 1. `/team add nom:<équipe>` pour chaque équipe (crée le rôle, la catégorie privée, un salon texte et un vocal « Créer un salon »)
 2. `/setup channel:<salon> role_inscrit:<rôle>` pour poster le formulaire d'inscription
-3. Le jour J, `/release active:true` envoie à chaque inscrit ses identifiants de connexion en MP
+3. Le jour J, `/release active:true` envoie à chaque inscrit l'adresse et la version du serveur en MP
+
+## Mots de passe
+
+Le bot ne stocke aucun mot de passe : AuthMe s'en charge. À l'inscription, le joueur reçoit un mot de passe de 4 mots anglais (liste de l'EFF), affiché une seule fois. `/password` en génère un nouveau, `/password mot_de_passe:...` permet de choisir le sien (16 à 30 caractères, sans espace ni accent, comme l'impose AuthMe).
 
 ## Commandes
 
-Toutes réservées aux administrateurs.
+Toutes réservées aux administrateurs, sauf `/password`.
 
 | Commande | |
 |---|---|
@@ -55,6 +59,7 @@ Toutes réservées aux administrateurs.
 | `/channel list\|add\|remove` | Salons vocaux qui créent un salon temporaire |
 | `/setup` | Poste le formulaire d'inscription |
 | `/release [active]` | Affiche ou change le mode release |
+| `/password [mot_de_passe]` | Nouveau mot de passe Minecraft (joueurs inscrits) |
 
 ## Migrations
 
