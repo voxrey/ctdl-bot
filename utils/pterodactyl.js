@@ -34,7 +34,15 @@ async function pterodactylRequest(endpoint, method = 'GET', body = null) {
     return await response.json();
 }
 
+// Sans configuration Pterodactyl, les commandes sont simulées (utile en dev)
+const PT_ENABLED = Boolean(PT_HOST && PT_TOKEN && process.env.PT_SERVER_ID);
+
 async function sendMinecraftCommand(serverId, command) {
+    if (!PT_ENABLED) {
+        console.log(`[MC simulé] ${command}`);
+        return;
+    }
+
     const state = await getServerState(serverId);
 
     if (state !== 'running') {

@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField, ActionRowBuilder, StringSelectMenuBuilder, ChannelType } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, ActionRowBuilder, StringSelectMenuBuilder, ChannelType, MessageFlags } = require('discord.js');
 const { sendMinecraftCommand } = require('../utils/pterodactyl');
 
 async function updateInscriptionMessages(knex, client) {
@@ -72,10 +72,10 @@ module.exports = {
         if (subcommand === 'list') {
             const teams = await knex('teams').select('*');
             if (teams.length === 0) {
-                await interaction.reply({ content: 'Aucune équipe configurée', ephemeral: true });
+                await interaction.reply({ content: 'Aucune équipe configurée', flags: MessageFlags.Ephemeral });
             } else {
                 const list = teams.map(t => `• **${t.label}** - <@&${t.role_id}>`).join('\n');
-                await interaction.reply({ content: `**Équipes:**\n${list}`, ephemeral: true });
+                await interaction.reply({ content: `**Équipes:**\n${list}`, flags: MessageFlags.Ephemeral });
             }
         }
 
@@ -83,7 +83,7 @@ module.exports = {
             const nom = interaction.options.getString('nom');
 
             if (nom.length > 12) {
-                await interaction.reply({ content: `❌ Le nom de l'équipe ne peut pas dépasser 12 caractères (actuellement: ${nom.length})`, ephemeral: true });
+                await interaction.reply({ content: `❌ Le nom de l'équipe ne peut pas dépasser 12 caractères (actuellement: ${nom.length})`, flags: MessageFlags.Ephemeral });
                 return;
             }
 
@@ -155,7 +155,7 @@ module.exports = {
             } catch (error) {
                 console.error('Erreur création équipe:', error);
                 const replyMethod = interaction.deferred ? 'editReply' : 'reply';
-                await interaction[replyMethod]({ content: `Erreur: ${error.message}`, ephemeral: true });
+                await interaction[replyMethod]({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
             }
         }
 
@@ -279,7 +279,7 @@ module.exports = {
             } catch (error) {
                 console.error('Erreur suppression équipe:', error);
                 const replyMethod = interaction.deferred ? 'editReply' : 'reply';
-                await interaction[replyMethod]({ content: `Erreur: ${error.message}`, ephemeral: true });
+                await interaction[replyMethod]({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
             }
         }
 
@@ -320,7 +320,7 @@ module.exports = {
 
                 await interaction.reply({ content: `**Statistiques d'inscription:**\n\n${sections.join('\n')}` });
             } catch (error) {
-                await interaction.reply({ content: `Erreur: ${error.message}`, ephemeral: true });
+                await interaction.reply({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
             }
         }
     }

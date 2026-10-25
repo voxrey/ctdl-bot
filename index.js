@@ -1,6 +1,6 @@
 require('dotenv').config({ quiet: true });
 
-const { Client, GatewayIntentBits, ChannelType, PermissionsBitField, ModalBuilder, TextInputBuilder, TextInputStyle, InteractionType, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, ChannelType, PermissionsBitField, ModalBuilder, TextInputBuilder, TextInputStyle, InteractionType, REST, Routes, MessageFlags } = require('discord.js');
 const knexConfig = require('./knexfile');
 const fs = require('fs');
 const path = require('path');
@@ -123,8 +123,14 @@ client.on('interactionCreate', async interaction => {
             try {
                 await command.execute(interaction, knex, client);
             } catch (error) {
+                // 10062 : interaction expirée (> 3 s sans réponse), inutile de retenter
+                if (error.code === 10062) {
+                    console.error(`Interaction expirée (/${interaction.commandName})`);
+                    return;
+                }
                 console.error('Erreur commande:', error);
-                await interaction.reply({ content: 'Erreur lors de l\'exécution de la commande', ephemeral: true }).catch(console.error);
+                const replyMethod = interaction.replied || interaction.deferred ? 'followUp' : 'reply';
+                await interaction[replyMethod]({ content: 'Erreur lors de l\'exécution de la commande', flags: MessageFlags.Ephemeral }).catch(console.error);
             }
         }
     }

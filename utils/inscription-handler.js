@@ -1,3 +1,4 @@
+const { MessageFlags } = require('discord.js');
 const { generatePassword } = require('./password');
 const { sendLoginInstructions } = require('./messages');
 const { sendMinecraftCommand } = require('./pterodactyl');
@@ -8,21 +9,21 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
     const existingUser = await knex('users').where('discord_id', discordId).first();
 
     if (existingUser) {
-        await interaction.reply({ content: `Vous êtes déjà inscrit. Veuillez contacter un modérateur si rencontrer un problème.`, ephemeral: true });
+        await interaction.reply({ content: `Vous êtes déjà inscrit. Veuillez contacter un modérateur si rencontrer un problème.`, flags: MessageFlags.Ephemeral });
         return;
     }
 
     const existingPseudo = await knex('users').where('minecraft_username', pseudo).first();
 
     if (existingPseudo) {
-        await interaction.reply({ content: `Ce pseudo est déjà pris`, ephemeral: true });
+        await interaction.reply({ content: `Ce pseudo est déjà pris`, flags: MessageFlags.Ephemeral });
         return;
     }
 
     const team = await knex('teams').where('id', parseInt(selectedTeamId)).first();
 
     if (!team) {
-        await interaction.reply({ content: `Erreur: Équipe invalide`, ephemeral: true });
+        await interaction.reply({ content: `Erreur: Équipe invalide`, flags: MessageFlags.Ephemeral });
         return;
     }
 
@@ -68,12 +69,12 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
             const dmMessage = isRelease
                 ? '\nVous avez reçu les instructions de connexion par DM.'
                 : '\nVous recevrez les instructions de connexion par DM ultérieurement.';
-            await interaction.reply({ content: `Inscrit dans **${team.label}** avec le pseudo **${pseudo}**${dmMessage}`, ephemeral: true });
+            await interaction.reply({ content: `Inscrit dans **${team.label}** avec le pseudo **${pseudo}**${dmMessage}`, flags: MessageFlags.Ephemeral });
         } else {
-            await interaction.reply({ content: `Erreur: Rôle introuvable`, ephemeral: true });
+            await interaction.reply({ content: `Erreur: Rôle introuvable`, flags: MessageFlags.Ephemeral });
         }
     } catch (err) {
-        await interaction.reply({ content: `Erreur: ${err.message}`, ephemeral: true });
+        await interaction.reply({ content: `Erreur: ${err.message}`, flags: MessageFlags.Ephemeral });
     }
 }
 

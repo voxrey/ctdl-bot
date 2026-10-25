@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
 const { sendMinecraftCommand } = require('../utils/pterodactyl');
 
 module.exports = {
@@ -38,7 +38,7 @@ module.exports = {
                     .orderBy('teams.label');
 
                 if (users.length === 0) {
-                    await interaction.reply({ content: 'Aucun utilisateur inscrit', ephemeral: true });
+                    await interaction.reply({ content: 'Aucun utilisateur inscrit', flags: MessageFlags.Ephemeral });
                 } else {
                     const usersByTeam = {};
                     users.forEach(u => {
@@ -76,13 +76,13 @@ module.exports = {
                     }
 
                     // Envoyer le premier message en reply, les autres en followUp
-                    await interaction.reply({ content: messages[0], ephemeral: true });
+                    await interaction.reply({ content: messages[0], flags: MessageFlags.Ephemeral });
                     for (let i = 1; i < messages.length; i++) {
-                        await interaction.followUp({ content: messages[i], ephemeral: true });
+                        await interaction.followUp({ content: messages[i], flags: MessageFlags.Ephemeral });
                     }
                 }
             } catch (error) {
-                await interaction.reply({ content: `Erreur: ${error.message}`, ephemeral: true });
+                await interaction.reply({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
             }
         }
 
@@ -97,7 +97,7 @@ module.exports = {
                     .first();
 
                 if (!userData) {
-                    await interaction.reply({ content: `Utilisateur <@${user.id}> non inscrit`, ephemeral: true });
+                    await interaction.reply({ content: `Utilisateur <@${user.id}> non inscrit`, flags: MessageFlags.Ephemeral });
                     return;
                 }
 
@@ -110,10 +110,10 @@ module.exports = {
                              `**Équipe:** ${teamDisplay}\n` +
                              `**Pseudo Minecraft:** ${userData.minecraft_username}\n` +
                              `**Mot de passe:** \`${userData.password || 'N/A'}\``,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             } catch (error) {
-                await interaction.reply({ content: `Erreur: ${error.message}`, ephemeral: true });
+                await interaction.reply({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
             }
         }
 
@@ -124,7 +124,7 @@ module.exports = {
                 const userData = await knex('users').where('discord_id', user.id).first();
 
                 if (!userData) {
-                    await interaction.reply({ content: `Utilisateur <@${user.id}> non trouvé`, ephemeral: true });
+                    await interaction.reply({ content: `Utilisateur <@${user.id}> non trouvé`, flags: MessageFlags.Ephemeral });
                     return;
                 }
 
@@ -170,7 +170,7 @@ module.exports = {
 
                 await interaction.reply({ content: `Utilisateur <@${user.id}> (**${minecraftUsername}**) désenregistré` });
             } catch (error) {
-                await interaction.reply({ content: `Erreur: ${error.message}`, ephemeral: true });
+                await interaction.reply({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
             }
         }
     }

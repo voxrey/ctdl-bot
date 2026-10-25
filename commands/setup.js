@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, ActionRowBuilder, StringSelectMenuBuilder, MessageFlags } = require('discord.js');
 
 async function createInscriptionMessage(channel, knex) {
     const teams = await knex('teams').select('*');
@@ -47,7 +47,7 @@ module.exports = {
         try {
             const teams = await knex('teams').select('*');
             if (teams.length === 0) {
-                await interaction.reply({ content: 'Aucune équipe configurée', ephemeral: true });
+                await interaction.reply({ content: 'Aucune équipe configurée', flags: MessageFlags.Ephemeral });
                 return;
             }
 
@@ -58,10 +58,10 @@ module.exports = {
                     message_id: message.id,
                     inscrit_role_id: roleInscrit ? roleInscrit.id : null
                 });
-                await interaction.reply({ content: `Formulaire envoyé dans <#${channel.id}>`, ephemeral: true });
+                await interaction.reply({ content: `Formulaire envoyé dans <#${channel.id}>`, flags: MessageFlags.Ephemeral });
             }
         } catch (error) {
-            await interaction.reply({ content: `Erreur: ${error.message}`, ephemeral: true });
+            await interaction.reply({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
         }
     }
 };

@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -32,7 +32,7 @@ module.exports = {
         if (subcommand === 'list') {
             const channels = await knex('trigger_channels').select('*');
             if (channels.length === 0) {
-                await interaction.reply({ content: 'Aucun salon configuré', ephemeral: true });
+                await interaction.reply({ content: 'Aucun salon configuré', flags: MessageFlags.Ephemeral });
             } else {
                 const list = await Promise.all(channels.map(async (c) => {
                     try {
@@ -43,7 +43,7 @@ module.exports = {
                         return `• <#${c.channel_id}>`;
                     }
                 }));
-                await interaction.reply({ content: `**Salons de déclenchement:**\n${list.join('\n')}`, ephemeral: true });
+                await interaction.reply({ content: `**Salons de déclenchement:**\n${list.join('\n')}`, flags: MessageFlags.Ephemeral });
             }
         }
 
@@ -54,7 +54,7 @@ module.exports = {
                 await knex('trigger_channels').insert({ channel_id: channel.id });
                 await interaction.reply({ content: `Salon <#${channel.id}> ajouté` });
             } catch (error) {
-                await interaction.reply({ content: `Erreur: ${error.message}`, ephemeral: true });
+                await interaction.reply({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
             }
         }
 
@@ -69,7 +69,7 @@ module.exports = {
                     await interaction.reply({ content: `Salon <#${channel.id}> non configuré` });
                 }
             } catch (error) {
-                await interaction.reply({ content: `Erreur: ${error.message}`, ephemeral: true });
+                await interaction.reply({ content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral });
             }
         }
     }
