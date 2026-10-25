@@ -128,9 +128,11 @@ module.exports = {
                     return;
                 }
 
+                // Les commandes Minecraft peuvent dépasser les 3 s laissées par Discord pour répondre
+                await interaction.deferReply();
                 await unregisterUser(interaction.guild, knex, userData);
 
-                await interaction.reply({ content: `Utilisateur <@${user.id}> (**${userData.minecraft_username}**) désenregistré` });
+                await interaction.editReply({ content: `Utilisateur <@${user.id}> (**${userData.minecraft_username}**) désenregistré` });
             } catch (error) {
                 await replyError(interaction, error);
             }

@@ -29,15 +29,16 @@ module.exports = {
             }
 
             const password = chosen || generatePassword();
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             try {
                 await sendMinecraftCommand(process.env.PT_SERVER_ID, `authme password ${user.minecraft_username} ${password}`);
             } catch (mcError) {
                 console.error('Erreur changement mot de passe:', mcError.message);
-                await interaction.reply({ content: MC_UNAVAILABLE, flags: MessageFlags.Ephemeral });
+                await interaction.editReply({ content: MC_UNAVAILABLE });
                 return;
             }
 
-            await interaction.reply({ content: passwordMessage(password), flags: MessageFlags.Ephemeral });
+            await interaction.editReply({ content: passwordMessage(password) });
         } catch (error) {
             await replyError(interaction, error);
         }

@@ -45,6 +45,9 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
         return;
     }
 
+    // Les commandes Minecraft peuvent dépasser les 3 s laissées par Discord pour répondre
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     try {
         await knex('users').insert({ discord_id: discordId, minecraft_username: pseudo, team_id: team.id });
 
@@ -58,7 +61,7 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
             // Sans compte Minecraft, le mot de passe affiché serait inutilisable : on annule l'inscription
             console.error('Erreur enregistrement Minecraft:', mcError.message);
             await knex('users').where('discord_id', discordId).delete();
-            await interaction.reply({ content: MC_UNAVAILABLE, flags: MessageFlags.Ephemeral });
+            await interaction.editReply({ content: MC_UNAVAILABLE });
             return;
         }
 
@@ -73,9 +76,8 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
         const dmMessage = isRelease
             ? 'Vous avez reçu les instructions de connexion par DM.'
             : 'Vous recevrez les instructions de connexion par DM à l\'ouverture du serveur.';
-        await interaction.reply({
-            content: `Inscrit dans **${team.label}** avec le pseudo **${pseudo}**\n\n${passwordMessage(password)}\n\n${dmMessage}`,
-            flags: MessageFlags.Ephemeral
+        await interaction.editReply({
+            content: `Inscrit dans **${team.label}** avec le pseudo **${pseudo}**\n\n${passwordMessage(password)}\n\n${dmMessage}`
         });
     } catch (err) {
         console.error('Erreur inscription:', err);
