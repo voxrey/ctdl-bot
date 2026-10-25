@@ -1,0 +1,8 @@
+.git
+node_modules
+.env
+db/*.db
+specifications.md
+Containerfile
+.containerignore
+compose.yaml

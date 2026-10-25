@@ -73,10 +73,12 @@ npx knex migrate:rollback
 
 ## Déploiement
 
-Un service systemd est fourni dans `ctdl.service` (à adapter : chemin, utilisateur, version de Node).
+Avec Podman ou Docker, à partir du `.env` :
 
 ```bash
-sudo cp ctdl.service /etc/systemd/system/
-sudo systemctl enable --now ctdl
-journalctl -u ctdl -f
+podman compose up -d --build   # construit l'image et lance le bot
+podman compose logs -f
+podman compose down            # la base reste dans le volume db
 ```
+
+Le bot tourne en utilisateur non-root dans le conteneur, la base SQLite est dans le volume `db`. Avec Podman, activer `podman-restart.service` pour que le bot redémarre après un reboot.

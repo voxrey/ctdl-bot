@@ -193,4 +193,13 @@ client.on('interactionCreate', async interaction => {
 // Filet de sécurité : une erreur oubliée est loguée au lieu d'arrêter le bot
 process.on('unhandledRejection', error => console.error('Erreur non gérée:', error));
 
+// Arrêt propre : en conteneur, node ne réagit pas à SIGTERM par défaut
+for (const signal of ['SIGTERM', 'SIGINT']) {
+    process.on(signal, async () => {
+        await client.destroy();
+        await knex.destroy();
+        process.exit(0);
+    });
+}
+
 client.login(token);

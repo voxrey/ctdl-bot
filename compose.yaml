@@ -1,0 +1,13 @@
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: ctdl-bot
+    env_file: .env
+    volumes:
+      - db:/app/db
+    restart: unless-stopped
+
+volumes:
+  db:
