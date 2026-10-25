@@ -54,6 +54,8 @@ Toutes réservées aux administrateurs.
 
 ## Migrations
 
+Tant que le bot n'est pas en prod, tout le schéma est dans `migrations/20251126000000_init.js` : on le modifie directement et on supprime `db/database.db` pour repartir de zéro. Les nouvelles migrations, ce sera après la première mise en prod.
+
 ```bash
 npx knex migrate:make nom_de_la_migration
 npx knex migrate:latest
