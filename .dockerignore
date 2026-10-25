@@ -4,5 +4,5 @@ node_modules
 db/*.db
 specifications.md
 Containerfile
-.containerignore
+.dockerignore
 compose.yaml

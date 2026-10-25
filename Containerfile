@@ -1,5 +1,4 @@
-# Debian slim : sqlite3 s'installe avec ses binaires précompilés (Alpine demanderait une compilation)
-FROM docker.io/library/node:22-slim
+FROM docker.io/library/node:22-trixie-slim
 
 WORKDIR /app
 
