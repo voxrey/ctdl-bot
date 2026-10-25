@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, MessageFlags, ChannelType } = require('discord.js');
 const { replyError } = require('../utils/messages');
 
 module.exports = {
@@ -17,6 +17,7 @@ module.exports = {
                 .addChannelOption(option =>
                     option.setName('salon')
                         .setDescription('Salon vocal')
+                        .addChannelTypes(ChannelType.GuildVoice)
                         .setRequired(true)))
         .addSubcommand(subcommand =>
             subcommand
@@ -25,6 +26,7 @@ module.exports = {
                 .addChannelOption(option =>
                     option.setName('salon')
                         .setDescription('Salon à supprimer')
+                        .addChannelTypes(ChannelType.GuildVoice)
                         .setRequired(true))),
 
     async execute(interaction, knex) {

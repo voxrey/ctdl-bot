@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, MessageFlags, ChannelType } = require('discord.js');
 const { replyError, buildInscriptionMessage } = require('../utils/messages');
 
 module.exports = {
@@ -9,6 +9,7 @@ module.exports = {
         .addChannelOption(option =>
             option.setName('channel')
                 .setDescription('Salon où envoyer le formulaire')
+                .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
                 .setRequired(true))
         .addRoleOption(option =>
             option.setName('role_inscrit')
