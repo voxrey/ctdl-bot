@@ -19,6 +19,12 @@ module.exports = {
         const channel = interaction.options.getChannel('channel');
         const roleInscrit = interaction.options.getRole('role_inscrit');
 
+        // editable : le rôle est sous celui du bot et n'est pas géré par une intégration
+        if (!roleInscrit.editable || roleInscrit.id === interaction.guild.id) {
+            await interaction.reply({ content: `❌ Le bot ne peut pas attribuer le rôle <@&${roleInscrit.id}>. Placez le rôle du bot au-dessus dans la hiérarchie des rôles.`, flags: MessageFlags.Ephemeral });
+            return;
+        }
+
         try {
             const teams = await knex('teams').select('*');
             if (teams.length === 0) {

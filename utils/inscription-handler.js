@@ -27,6 +27,17 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
         return;
     }
 
+    // Vérifier que les rôles existent et que le bot peut les donner, avant toute écriture
+    const appState = await knex('app_state').first();
+    const teamRole = interaction.guild.roles.cache.get(team.role_id);
+    const inscritRole = appState?.inscrit_role_id ? interaction.guild.roles.cache.get(appState.inscrit_role_id) : null;
+
+    if (!teamRole?.editable || (appState?.inscrit_role_id && !inscritRole?.editable)) {
+        console.error(`Inscription impossible : rôle d'équipe (${team.role_id}) ou rôle "Inscrit" (${appState?.inscrit_role_id}) introuvable ou non attribuable par le bot`);
+        await interaction.reply({ content: INSCRIPTION_ERROR, flags: MessageFlags.Ephemeral });
+        return;
+    }
+
     try {
         const password = generatePassword();
 
@@ -43,32 +54,18 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
             console.error('Erreur enregistrement Minecraft:', error.message);
         }
 
-        const appState = await knex('app_state').first();
         const isRelease = appState && appState.release;
 
         if (isRelease) {
             await sendLoginInstructions(interaction.user, password);
         }
 
-        const rolesToAdd = [];
+        await interaction.member.roles.add([teamRole, inscritRole].filter(Boolean));
 
-        const teamRole = interaction.guild.roles.cache.get(team.role_id);
-        if (teamRole) rolesToAdd.push(teamRole);
-
-        if (appState && appState.inscrit_role_id) {
-            const inscritRole = interaction.guild.roles.cache.get(appState.inscrit_role_id);
-            if (inscritRole) rolesToAdd.push(inscritRole);
-        }
-
-        if (rolesToAdd.length > 0) {
-            await interaction.member.roles.add(rolesToAdd);
-            const dmMessage = isRelease
-                ? '\nVous avez reçu les instructions de connexion par DM.'
-                : '\nVous recevrez les instructions de connexion par DM ultérieurement.';
-            await interaction.reply({ content: `Inscrit dans **${team.label}** avec le pseudo **${pseudo}**${dmMessage}`, flags: MessageFlags.Ephemeral });
-        } else {
-            await interaction.reply({ content: `Erreur: Rôle introuvable`, flags: MessageFlags.Ephemeral });
-        }
+        const dmMessage = isRelease
+            ? '\nVous avez reçu les instructions de connexion par DM.'
+            : '\nVous recevrez les instructions de connexion par DM ultérieurement.';
+        await interaction.reply({ content: `Inscrit dans **${team.label}** avec le pseudo **${pseudo}**${dmMessage}`, flags: MessageFlags.Ephemeral });
     } catch (err) {
         console.error('Erreur inscription:', err);
         await replyError(interaction, err, INSCRIPTION_ERROR);
