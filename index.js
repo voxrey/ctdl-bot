@@ -18,7 +18,6 @@ const client = new Client({
     ]
 });
 
-const tempChannels = new Map();
 const commands = new Map();
 const commandsData = [];
 
@@ -33,6 +32,20 @@ for (const file of commandFiles) {
 const { handleInscription } = require('./utils/inscription-handler');
 const { sendMinecraftCommand, getServerState } = require('./utils/pterodactyl');
 
+// Supprime les salons temporaires vidés ou supprimés pendant que le bot était éteint
+async function cleanTempChannels() {
+    const rows = await knex('temp_channels').select('channel_id');
+    for (const { channel_id } of rows) {
+        const channel = await client.channels.fetch(channel_id).catch(() => null);
+        if (channel && channel.members.size > 0) continue;
+
+        if (channel) {
+            await channel.delete().catch(error => console.error('Erreur suppression salon temporaire:', error));
+        }
+        await knex('temp_channels').where('channel_id', channel_id).delete();
+    }
+}
+
 client.once('clientReady', async () => {
     try {
         await knex.migrate.latest();
@@ -41,6 +54,8 @@ client.once('clientReady', async () => {
         if (!appState) {
             await knex('app_state').insert({ release: false });
         }
+
+        await cleanTempChannels();
 
         const rest = new REST({ version: '10' }).setToken(token);
         await rest.put(Routes.applicationCommands(client.user.id), { body: commandsData });
@@ -83,19 +98,22 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
                 permissionOverwrites: categoryPermissions,
             });
 
+            await knex('temp_channels').insert({ channel_id: newChannel.id, owner_id: member.id });
             await member.voice.setChannel(newChannel);
-            tempChannels.set(newChannel.id, member.id);
         } catch (error) {
             console.error("Erreur:", error);
         }
     }
 
-    if (oldState.channelId && tempChannels.has(oldState.channelId)) {
-        const channelToDelete = await oldState.guild.channels.fetch(oldState.channelId);
+    if (oldState.channelId && oldState.channelId !== newState.channelId) {
+        const isTemp = await knex('temp_channels').where('channel_id', oldState.channelId).first();
+        if (isTemp) {
+            const channelToDelete = await oldState.guild.channels.fetch(oldState.channelId).catch(() => null);
 
-        if (channelToDelete && channelToDelete.members.size === 0) {
-            await channelToDelete.delete();
-            tempChannels.delete(oldState.channelId);
+            if (!channelToDelete || channelToDelete.members.size === 0) {
+                await channelToDelete?.delete();
+                await knex('temp_channels').where('channel_id', oldState.channelId).delete();
+            }
         }
     }
 });
