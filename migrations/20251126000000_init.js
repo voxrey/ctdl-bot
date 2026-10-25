@@ -39,6 +39,7 @@ exports.up = async function(knex) {
     table.increments('id').primary();
     table.boolean('release').defaultTo(false);
     table.string('inscrit_role_id'); // Rôle "Inscrit", défini par /setup
+    table.string('tuto_channel_id'); // Salon de tutoriel, défini par /tuto
   });
 };
 

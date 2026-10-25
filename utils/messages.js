@@ -21,6 +21,21 @@ function buildInscriptionMessage(teams) {
     };
 }
 
+// Message de bienvenue : salons cliquables s'ils sont configurés (/setup, /tuto)
+function buildWelcomeMessage(guildName, inscriptionChannelId, tutoChannelId) {
+    const inscription = inscriptionChannelId ? `dans le salon <#${inscriptionChannelId}>` : 'dans le salon d\'inscription';
+    let content = `### Bienvenue sur le serveur ${guildName} !\n\n` +
+                  `**Instructions d'inscription :**\n` +
+                  `Pour rejoindre le serveur, vous devez vous inscrire ${inscription} :\n` +
+                  `• Choisissez votre team\n` +
+                  `• Entrez votre pseudo Minecraft`;
+    if (tutoChannelId) {
+        content += `\n\n**Pas encore de compte Minecraft ?**\n` +
+                   `Suivez le tutoriel dans le salon <#${tutoChannelId}> pour en obtenir un.`;
+    }
+    return content;
+}
+
 async function sendLoginInstructions(user) {
     try {
         await user.send(`Connectez vous sur **${process.env.MC_ADDRESS}** en version **${process.env.MC_VERSION}**\nPuis tapez dans le chat \`/login <mot de passe>\` avec le mot de passe reçu à l'inscription\nVous en aurez besoin à chaque connexion\nMot de passe perdu ? Tapez \`/password\` sur le Discord pour en obtenir un nouveau\nVous serez automatiquement mis dans la bonne équipe\nSi vous rencontrez un problème veuillez contacter un modérateur`);
@@ -48,4 +63,4 @@ async function replyError(interaction, error, content = `Erreur: ${error.message
     await interaction[method](payload).catch(console.error);
 }
 
-module.exports = { sendLoginInstructions, passwordMessage, replyError, buildInscriptionMessage, INSCRIPTION_ERROR, MC_UNAVAILABLE };
+module.exports = { buildWelcomeMessage, sendLoginInstructions, passwordMessage, replyError, buildInscriptionMessage, INSCRIPTION_ERROR, MC_UNAVAILABLE };
