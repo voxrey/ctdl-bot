@@ -19,6 +19,10 @@ DISCORD_TOKEN=
 PT_HOST=
 PT_TOKEN=
 PT_SERVER_ID=
+
+# Affichés dans le MP de connexion
+MC_ADDRESS=mc.bde-imtbs-tsp.fr
+MC_VERSION=1.21.x
 ```
 
 Si une des variables `PT_*` est vide, les commandes Minecraft ne sont pas envoyées, elles sont juste affichées dans la console (`[MC simulé] ...`). Pratique pour tester sans serveur.
