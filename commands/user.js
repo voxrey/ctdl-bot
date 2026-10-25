@@ -35,7 +35,7 @@ module.exports = {
             try {
                 const users = await knex('users')
                     .leftJoin('teams', 'users.team_id', 'teams.id')
-                    .select('users.discord_id', 'users.minecraft_username', 'users.password', 'teams.label as team_label')
+                    .select('users.discord_id', 'users.minecraft_username', 'teams.label as team_label')
                     .orderBy('teams.label');
 
                 if (users.length === 0) {
@@ -52,7 +52,7 @@ module.exports = {
 
                     const sections = Object.keys(usersByTeam).map(team => {
                         const teamUsers = usersByTeam[team].map(u =>
-                            `- <@${u.discord_id}> - **${u.minecraft_username}** - MDP: \`${u.password || 'N/A'}\``
+                            `- <@${u.discord_id}> - **${u.minecraft_username}**`
                         ).join('\n');
                         return `**${team}**\n${teamUsers}`;
                     });
@@ -94,7 +94,7 @@ module.exports = {
                 const userData = await knex('users')
                     .leftJoin('teams', 'users.team_id', 'teams.id')
                     .where('users.discord_id', user.id)
-                    .select('users.minecraft_username', 'users.password', 'teams.label as team_label', 'teams.role_id as team_role_id')
+                    .select('users.minecraft_username', 'teams.label as team_label', 'teams.role_id as team_role_id')
                     .first();
 
                 if (!userData) {
@@ -109,8 +109,7 @@ module.exports = {
                 await interaction.reply({
                     content: `**Informations de <@${user.id}>**\n\n` +
                              `**Équipe:** ${teamDisplay}\n` +
-                             `**Pseudo Minecraft:** ${userData.minecraft_username}\n` +
-                             `**Mot de passe:** \`${userData.password || 'N/A'}\``,
+                             `**Pseudo Minecraft:** ${userData.minecraft_username}`,
                     flags: MessageFlags.Ephemeral
                 });
             } catch (error) {
