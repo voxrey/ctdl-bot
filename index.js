@@ -77,8 +77,8 @@ async function handleVoiceStateUpdate(oldState, newState) {
         const category = triggerChannel.parent;
 
         try {
-            // Récupérer les permissions de la catégorie
-            const categoryPermissions = category.permissionOverwrites.cache.map(overwrite => ({
+            // Reprendre les permissions de la catégorie, ou du salon déclencheur s'il n'est dans aucune catégorie
+            const categoryPermissions = (category ?? triggerChannel).permissionOverwrites.cache.map(overwrite => ({
                 id: overwrite.id,
                 allow: overwrite.allow.bitfield,
                 deny: overwrite.deny.bitfield
