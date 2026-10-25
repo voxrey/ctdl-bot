@@ -10,11 +10,14 @@ async function sendLoginInstructions(user, password) {
     }
 }
 
+// Message montré aux joueurs : le détail technique reste dans les logs
+const INSCRIPTION_ERROR = 'Une erreur est survenue lors de l\'inscription. Veuillez contacter un modérateur.';
+
 // Répond avec l'erreur, que l'interaction ait déjà été répondue/différée ou non
-async function replyError(interaction, error) {
-    const payload = { content: `Erreur: ${error.message}`, flags: MessageFlags.Ephemeral };
+async function replyError(interaction, error, content = `Erreur: ${error.message}`) {
+    const payload = { content, flags: MessageFlags.Ephemeral };
     const method = interaction.deferred ? 'editReply' : interaction.replied ? 'followUp' : 'reply';
     await interaction[method](payload).catch(console.error);
 }
 
-module.exports = { sendLoginInstructions, replyError };
+module.exports = { sendLoginInstructions, replyError, INSCRIPTION_ERROR };

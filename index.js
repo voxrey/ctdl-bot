@@ -30,7 +30,7 @@ for (const file of commandFiles) {
 }
 
 const { handleInscription } = require('./utils/inscription-handler');
-const { replyError } = require('./utils/messages');
+const { replyError, INSCRIPTION_ERROR } = require('./utils/messages');
 const { sendMinecraftCommand, getServerState } = require('./utils/pterodactyl');
 
 // Supprime les salons temporaires vidés ou supprimés pendant que le bot était éteint
@@ -68,7 +68,7 @@ client.once('clientReady', async () => {
     }
 });
 
-client.on('voiceStateUpdate', async (oldState, newState) => {
+async function handleVoiceStateUpdate(oldState, newState) {
     const channels = await knex('trigger_channels').select('channel_id');
     const triggerChannelIds = channels.map(ch => ch.channel_id);
 
@@ -117,6 +117,10 @@ client.on('voiceStateUpdate', async (oldState, newState) => {
             }
         }
     }
+}
+
+client.on('voiceStateUpdate', (oldState, newState) => {
+    handleVoiceStateUpdate(oldState, newState).catch(error => console.error('Erreur salon vocal:', error));
 });
 
 client.on('guildMemberAdd', async member => {
@@ -169,15 +173,24 @@ client.on('interactionCreate', async interaction => {
                 .setRequired(true);
 
             modal.addComponents(new ActionRowBuilder().addComponents(pseudoInput));
-            await interaction.showModal(modal);
+            await interaction.showModal(modal).catch(error => {
+                console.error('Erreur formulaire:', error);
+                return replyError(interaction, error, INSCRIPTION_ERROR);
+            });
         }
     } else if (interaction.type === InteractionType.ModalSubmit) {
         if (interaction.customId.startsWith('modal_minecraft_pseudo_')) {
             const selectedTeamId = interaction.customId.split('modal_minecraft_pseudo_')[1];
             const pseudo = interaction.fields.getTextInputValue('pseudoInput');
-            await handleInscription(interaction, knex, selectedTeamId, pseudo);
+            await handleInscription(interaction, knex, selectedTeamId, pseudo).catch(error => {
+                console.error('Erreur inscription:', error);
+                return replyError(interaction, error, INSCRIPTION_ERROR);
+            });
         }
     }
 });
+
+// Filet de sécurité : une erreur oubliée est loguée au lieu d'arrêter le bot
+process.on('unhandledRejection', error => console.error('Erreur non gérée:', error));
 
 client.login(token);
