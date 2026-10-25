@@ -7,6 +7,11 @@ const path = require('path');
 
 const knex = require('knex')(knexConfig.development);
 const token = process.env.DISCORD_TOKEN;
+// Le bot ne sert qu'un serveur : commandes enregistrées sur celui-ci, événements des autres ignorés
+const guildId = process.env.GUILD_ID;
+if (!guildId) {
+    throw new Error('GUILD_ID manquant dans .env');
+}
 
 const client = new Client({
     intents: [
@@ -57,7 +62,9 @@ client.once('clientReady', async () => {
         await cleanTempChannels();
 
         const rest = new REST({ version: '10' }).setToken(token);
-        await rest.put(Routes.applicationCommands(client.user.id), { body: commandsData });
+        await rest.put(Routes.applicationGuildCommands(client.user.id, guildId), { body: commandsData });
+        // Retire les commandes globales enregistrées par les anciennes versions
+        await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
         console.log(`Connecté: ${client.user.tag}`);
 
         await sendMinecraftCommand(process.env.PT_SERVER_ID, 'say Bot connecté');
@@ -118,10 +125,12 @@ async function handleVoiceStateUpdate(oldState, newState) {
 }
 
 client.on('voiceStateUpdate', (oldState, newState) => {
+    if (newState.guild.id !== guildId) return;
     handleVoiceStateUpdate(oldState, newState).catch(error => console.error('Erreur salon vocal:', error));
 });
 
 client.on('guildMemberAdd', async member => {
+    if (member.guild.id !== guildId) return;
     try {
         const appState = await knex('app_state').first();
         const inscriptionMsg = await knex('inscription_messages').orderBy('id', 'desc').first();
@@ -132,6 +141,8 @@ client.on('guildMemberAdd', async member => {
 });
 
 client.on('interactionCreate', async interaction => {
+    if (interaction.guildId !== guildId) return;
+
     if (interaction.isChatInputCommand()) {
         const command = commands.get(interaction.commandName);
         if (command) {

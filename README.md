@@ -14,6 +14,7 @@ Créer un fichier `.env` à la racine :
 
 ```env
 DISCORD_TOKEN=
+GUILD_ID=        # id du serveur Discord du bot
 
 # Pterodactyl, laisser vide en local
 PT_HOST=
