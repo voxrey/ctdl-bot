@@ -16,10 +16,13 @@ Créer un fichier `.env` à la racine :
 DISCORD_TOKEN=
 GUILD_ID=        # id du serveur Discord du bot
 
-# Pterodactyl, laisser vide en local
+# Lien avec la console Minecraft : Pterodactyl OU RCON (voir plus bas)
 PT_HOST=
 PT_TOKEN=
 PT_SERVER_ID=
+RCON_HOST=127.0.0.1
+RCON_PORT=25575
+RCON_PASSWORD=
 MC_QUEUE_INTERVAL=30   # secondes entre deux envois de la file Minecraft
 
 # Affichés dans le MP de connexion
@@ -27,7 +30,25 @@ MC_ADDRESS=mc.bde-imtbs-tsp.fr
 MC_VERSION=1.21.x
 ```
 
-Si une des variables `PT_*` est vide, les commandes Minecraft ne sont pas envoyées, elles sont juste affichées dans la console (`[MC simulé] ...`). Pratique pour tester sans serveur.
+Le bot choisit le lien au démarrage et l'affiche (`Lien Minecraft : ...`) :
+- **Pterodactyl** si `PT_HOST`, `PT_TOKEN` et `PT_SERVER_ID` sont remplis ;
+- sinon **RCON** si `RCON_PASSWORD` est rempli ;
+- sinon **simulé** : les commandes ne sont pas envoyées, juste affichées dans la console (`[MC simulé] ...`). Pratique pour tester sans serveur.
+
+### RCON (serveur hors Pterodactyl, par exemple sur verso)
+
+RCON est la console à distance intégrée à Minecraft. Elle passe en clair : le serveur ne l'écoute que sur sa propre machine (`127.0.0.1`), et le bot y accède par un tunnel SSH. Le serveur prêt à l'emploi de `../server/` est réglé ainsi, et `init.sh` y écrit le mot de passe dans `.rcon-password`.
+
+1. Ouvrir le tunnel, dans un terminal à part (le laisser tourner) :
+   ```bash
+   ssh -N -L 25575:127.0.0.1:25575 verso
+   ```
+2. Dans `.env` : `RCON_HOST=127.0.0.1`, `RCON_PORT=25575`, `RCON_PASSWORD=` le contenu de `~/ctdl-server/.rcon-password` sur verso (`ssh verso cat ctdl-server/.rcon-password`). Laisser les `PT_*` vides.
+3. `npm start`. Le bot doit afficher `Lien Minecraft : rcon`.
+
+Tunnel fermé ou serveur éteint : le bot voit le serveur comme indisponible et met les commandes en file (voir ci-dessous). Une connexion RCON est ouverte par commande, rien à relancer quand le tunnel revient.
+
+Dans un conteneur (`podman compose`), `127.0.0.1` désigne le conteneur, pas la machine : lancer le bot avec `npm start` pour les tests, ou mettre `network_mode: host` dans `compose.yaml`.
 
 Quand le serveur Minecraft est éteint, les commandes du bot sont mises en file (table `mc_commands`) et envoyées dans l'ordre à son retour : toutes les `MC_QUEUE_INTERVAL` secondes et avant chaque nouvelle commande. `/mc pending` affiche la file. Les commandes contenant un mot de passe ne sont jamais mises en file : l'inscription et `/password` sont refusées tant que le serveur est indisponible, et les `kick` sont abandonnés.
 
@@ -87,5 +108,7 @@ podman compose up -d --build   # construit l'image et lance le bot
 podman compose logs -f
 podman compose down            # la base reste dans le volume db
 ```
+
+Si le bot tourne sur la même machine que le serveur, RCON marche sans tunnel (`RCON_HOST=127.0.0.1`), avec `network_mode: host` pour le conteneur.
 
 Le bot tourne en utilisateur non-root dans le conteneur, la base SQLite est dans le volume `db`. Avec Podman, activer `podman-restart.service` pour que le bot redémarre après un reboot.

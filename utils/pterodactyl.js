@@ -52,4 +52,4 @@ async function sendCommand(command) {
     await pterodactylRequest(`/servers/${PT_SERVER_ID}/command`, 'POST', { command });
 }
 
-module.exports = { getServerState, sendCommand };
+module.exports = { PT_ENABLED, getServerState, sendCommand };

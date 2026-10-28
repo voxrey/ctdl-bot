@@ -1,4 +1,4 @@
-const { getServerState, sendCommand } = require('./pterodactyl');
+const { getServerState, sendCommand } = require('./minecraft');
 
 // Un seul envoi à la fois (timer et commandes utilisateur), pour garder l'ordre de la file
 let lock = Promise.resolve();
