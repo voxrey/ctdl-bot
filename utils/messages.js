@@ -1,7 +1,13 @@
 const { MessageFlags, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 
-// Formulaire d'inscription : menu de choix d'équipe
+// Formulaire d'inscription : menu de choix d'équipe (sans équipe, pas de menu : Discord en refuse un vide)
 function buildInscriptionMessage(teams) {
+    if (teams.length === 0) {
+        return {
+            content: 'Inscriptions fermées : aucune équipe pour le moment.',
+            components: []
+        };
+    }
     const row = new ActionRowBuilder()
         .addComponents(
             new StringSelectMenuBuilder()

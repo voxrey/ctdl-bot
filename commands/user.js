@@ -238,7 +238,7 @@ module.exports = {
                 }
 
                 // Quitte l'ancienne équipe Minecraft et rejoint la nouvelle (à la prochaine connexion s'il est hors ligne)
-                const sent = await runMinecraftCommands(knex, [`tteamset ${userData.minecraft_username} ${team.label}`]);
+                const sent = await runMinecraftCommands(knex, [`marche admin team set ${userData.minecraft_username} ${team.label}`]);
 
                 await interaction.editReply({ content: `<@${user.id}> (**${userData.minecraft_username}**) déplacé dans **${team.label}**` + (sent ? '' : `\n${MC_PENDING}`) });
             } catch (error) {

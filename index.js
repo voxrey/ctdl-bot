@@ -67,6 +67,9 @@ client.once('clientReady', async () => {
         await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
         console.log(`Connecté: ${client.user.tag}`);
 
+        // Remet les formulaires d'inscription à jour (équipes ajoutées ou supprimées pendant un arrêt, ou avant un correctif)
+        await commands.get('team').updateInscriptionMessages(knex, client);
+
         // Vide aussi la file restée en attente avant le redémarrage
         await runMinecraftCommands(knex, ['say Bot connecté'], 'optional');
         setInterval(() => flushQueue(knex).catch(console.error), (Number(process.env.MC_QUEUE_INTERVAL) || 30) * 1000);

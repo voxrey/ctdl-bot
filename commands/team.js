@@ -7,10 +7,6 @@ async function updateInscriptionMessages(knex, client) {
     const messages = await knex('inscription_messages').select('*');
     const teams = await knex('teams').select('*');
 
-    if (teams.length === 0) {
-        return;
-    }
-
     for (const msg of messages) {
         try {
             const channel = await client.channels.fetch(msg.channel_id);
@@ -23,6 +19,7 @@ async function updateInscriptionMessages(knex, client) {
 }
 
 module.exports = {
+    updateInscriptionMessages,
     data: new SlashCommandBuilder()
         .setName('team')
         .setDescription('Gère les équipes')

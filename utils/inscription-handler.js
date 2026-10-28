@@ -70,7 +70,7 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo, memb
             return;
         }
 
-        await runMinecraftCommands(knex, [`tteamregister ${pseudo} ${team.label}`]);
+        await runMinecraftCommands(knex, [`marche admin team set ${pseudo} ${team.label}`]);
 
         const isRelease = appState && appState.release;
 

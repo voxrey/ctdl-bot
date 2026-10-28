@@ -3,7 +3,7 @@ const { runMinecraftCommands } = require('./mc-queue');
 // Désinscrit un joueur : Minecraft, rôles Discord (équipes + "Inscrit") et base.
 // Renvoie false si la désinscription Minecraft est restée en file
 async function unregisterUser(guild, knex, user) {
-    const sent = await runMinecraftCommands(knex, [`authme unregister ${user.minecraft_username}`, `tteamunregister ${user.minecraft_username}`, `teama leave ${user.minecraft_username}`]);
+    const sent = await runMinecraftCommands(knex, [`authme unregister ${user.minecraft_username}`, `marche admin team clear ${user.minecraft_username}`]);
     await runMinecraftCommands(knex, [`kick ${user.minecraft_username}`], 'optional');
 
     // Le membre a pu quitter le serveur

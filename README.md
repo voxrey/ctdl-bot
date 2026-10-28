@@ -52,6 +52,8 @@ Dans un conteneur (`podman compose`), `127.0.0.1` désigne le conteneur, pas la 
 
 Quand le serveur Minecraft est éteint, les commandes du bot sont mises en file (table `mc_commands`) et envoyées dans l'ordre à son retour : toutes les `MC_QUEUE_INTERVAL` secondes et avant chaque nouvelle commande. `/mc pending` affiche la file. Les commandes contenant un mot de passe ne sont jamais mises en file : l'inscription et `/password` sont refusées tant que le serveur est indisponible, et les `kick` sont abandonnés.
 
+Les équipes Minecraft passent par le plugin CtdlShop (plus de Skript) : `marche admin team set <pseudo> <équipe>` à l'inscription et pour `/user team` (quitte l'ancienne équipe, rejoint la nouvelle tout de suite si le joueur est connecté, sinon à sa prochaine connexion), et `marche admin team clear <pseudo>` à la désinscription. `marche admin team pending` (console Minecraft) liste les joueurs pas encore connectés. Le serveur a donc besoin de BetterTeams et CtdlShop.
+
 Le bot a besoin des intents privilégiés **Server Members** et **Message Content** (à activer sur le portail développeur Discord), et des permissions pour gérer les rôles, les salons et déplacer des membres.
 
 ## Lancement
