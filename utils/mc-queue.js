@@ -79,4 +79,26 @@ function runMinecraftCommands(knex, commands, mode = 'queue') {
     });
 }
 
-module.exports = { runMinecraftCommands, flushQueue };
+/**
+ * Envoie des commandes tout de suite, sans file, et renvoie leurs réponses (codes couleur retirés).
+ * Renvoie null si le serveur est indisponible ; une réponse vaut null si le lien n'en donne pas (Pterodactyl, simulé).
+ */
+function queryMinecraft(knex, commands) {
+    return withLock(async () => {
+        if (!(await isServerRunning())) return null;
+        try {
+            await sendPending(knex);
+            const outputs = [];
+            for (const command of commands) {
+                const out = await sendCommand(command);
+                outputs.push(typeof out === 'string' ? out.replace(/§[0-9a-fk-orx]/gi, '').trim() : null);
+            }
+            return outputs;
+        } catch (error) {
+            console.error('Erreur envoi commande Minecraft:', error.message);
+            return null;
+        }
+    });
+}
+
+module.exports = { runMinecraftCommands, queryMinecraft, flushQueue };

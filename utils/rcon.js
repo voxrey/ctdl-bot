@@ -66,8 +66,9 @@ async function getServerState() {
     }
 }
 
+// Renvoie la réponse du serveur (Pterodactyl et le mode simulé ne renvoient rien)
 async function sendCommand(command) {
-    await rconExec(command);
+    return rconExec(command);
 }
 
 module.exports = { RCON_ENABLED, getServerState, sendCommand };

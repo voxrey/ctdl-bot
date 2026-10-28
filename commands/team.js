@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, PermissionsBitField, ChannelType, MessageFlags } = require('discord.js');
-const { runMinecraftCommands } = require('../utils/mc-queue');
+const { runMinecraftCommands, queryMinecraft } = require('../utils/mc-queue');
 const { replyError, buildInscriptionMessage, MC_PENDING } = require('../utils/messages');
 const { unregisterUser } = require('../utils/unregister');
 
@@ -97,9 +97,30 @@ module.exports = {
 
             // Éléments Discord créés, à supprimer si une étape échoue
             const created = [];
+            // Équipe Minecraft créée et vérifiée, à dissoudre si une étape Discord échoue
+            let mcCreated = false;
 
             try {
                 await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+                // 0. Créer l'équipe Minecraft d'abord : si BetterTeams refuse, rien n'est créé côté Discord.
+                // null : serveur indisponible, la création part en file (étape 8)
+                const outputs = await queryMinecraft(knex, [`teama create ${nom}`, `marche admin team exists ${nom}`]);
+                let mcNote = '';
+                if (outputs === null) {
+                    mcNote = `\n${MC_PENDING}\n⚠️ Création Minecraft non vérifiée : contrôler avec \`marche admin team exists ${nom}\` au retour du serveur.`;
+                } else if (outputs[1] === null) {
+                    mcNote = `\n⚠️ Création Minecraft non vérifiée (pas de réponse du serveur avec ce lien) : contrôler avec \`marche admin team exists ${nom}\`.`;
+                } else if (!outputs[1].includes('Équipe existante')) {
+                    await interaction.editReply({
+                        content: `❌ BetterTeams n'a pas créé l'équipe **${nom}**, rien n'a été créé sur Discord.\n` +
+                                 `Réponse de \`teama create\` : ${outputs[0] ? `\`${outputs[0]}\`` : '(vide)'}\n` +
+                                 `Vérifier \`allowedChars\`, \`bannedChars\` et \`maxTeamLength\` dans \`plugins/BetterTeams/config.yml\`.`
+                    });
+                    return;
+                } else {
+                    mcCreated = true;
+                }
 
                 // 1. Créer le rôle Discord
                 const role = await interaction.guild.roles.create({
@@ -154,15 +175,18 @@ module.exports = {
                 // 7. Mettre à jour les messages d'inscription
                 await updateInscriptionMessages(knex, client);
 
-                // 8. Envoyer la commande Minecraft
-                const sent = await runMinecraftCommands(knex, [`teama create ${nom}`]);
+                // 8. Serveur indisponible à l'étape 0 : la commande Minecraft part en file
+                if (outputs === null) {
+                    await runMinecraftCommands(knex, [`teama create ${nom}`]);
+                }
 
                 await interaction.editReply({
                     content: `✅ Équipe **${nom}** créée avec succès!\n` +
                              `- Rôle: <@&${role.id}>\n` +
                              `- Catégorie: ${category.name}\n` +
-                             `- Salon vocal ajouté comme trigger channel` +
-                             (sent ? '' : `\n${MC_PENDING}`)
+                             `- Salon vocal ajouté comme trigger channel\n` +
+                             `- Équipe Minecraft ${mcCreated ? 'créée et vérifiée' : 'en attente'}` +
+                             mcNote
                 });
             } catch (error) {
                 console.error('Erreur création équipe:', error);
@@ -174,6 +198,9 @@ module.exports = {
                 }
                 await knex('trigger_channels').whereIn('channel_id', ids).delete().catch(console.error);
                 await knex('teams').whereIn('role_id', ids).delete().catch(console.error);
+                if (mcCreated) {
+                    await runMinecraftCommands(knex, [`teama disband ${nom}`]).catch(console.error);
+                }
 
                 await replyError(interaction, error);
             }
