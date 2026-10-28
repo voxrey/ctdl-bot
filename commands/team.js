@@ -2,6 +2,7 @@ const { SlashCommandBuilder, PermissionsBitField, ChannelType, MessageFlags } = 
 const { runMinecraftCommands, queryMinecraft } = require('../utils/mc-queue');
 const { replyError, buildInscriptionMessage, MC_PENDING } = require('../utils/messages');
 const { unregisterUser } = require('../utils/unregister');
+const { TEAM_COLORS, colorChoices } = require('../utils/team-colors');
 
 async function updateInscriptionMessages(knex, client) {
     const messages = await knex('inscription_messages').select('*');
@@ -35,7 +36,25 @@ module.exports = {
                 .addStringOption(option =>
                     option.setName('nom')
                         .setDescription('Nom de l\'équipe')
-                        .setRequired(true)))
+                        .setRequired(true))
+                .addStringOption(option =>
+                    option.setName('couleur')
+                        .setDescription('Couleur du pseudo en jeu et du rôle Discord')
+                        .addChoices(...colorChoices)))
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('color')
+                .setDescription('Change la couleur d\'une équipe')
+                .addStringOption(option =>
+                    option.setName('nom')
+                        .setDescription('Nom de l\'équipe')
+                        .setAutocomplete(true)
+                        .setRequired(true))
+                .addStringOption(option =>
+                    option.setName('couleur')
+                        .setDescription('Couleur du pseudo en jeu et du rôle Discord')
+                        .setRequired(true)
+                        .addChoices(...colorChoices)))
         .addSubcommand(subcommand =>
             subcommand
                 .setName('remove')
@@ -75,6 +94,7 @@ module.exports = {
 
         if (subcommand === 'add') {
             const nom = interaction.options.getString('nom');
+            const color = TEAM_COLORS.find(c => c.code === interaction.options.getString('couleur'));
 
             // Mêmes règles que BetterTeams (allowedChars, min/maxTeamLength), sinon `teama create` échoue côté Minecraft
             if (!/^[A-Za-z0-9'._-]{2,20}$/.test(nom)) {
@@ -125,6 +145,7 @@ module.exports = {
                 // 1. Créer le rôle Discord
                 const role = await interaction.guild.roles.create({
                     name: nom,
+                    ...(color && { colors: { primaryColor: color.hex } }),
                     reason: `Création automatique pour l'équipe ${nom}`
                 });
                 created.push(role);
@@ -175,9 +196,13 @@ module.exports = {
                 // 7. Mettre à jour les messages d'inscription
                 await updateInscriptionMessages(knex, client);
 
-                // 8. Serveur indisponible à l'étape 0 : la commande Minecraft part en file
+                // 8. Serveur indisponible à l'étape 0 : la commande Minecraft part en file.
+                // La couleur suit la création (file si le serveur est indisponible)
                 if (outputs === null) {
                     await runMinecraftCommands(knex, [`teama create ${nom}`]);
+                }
+                if (color) {
+                    await runMinecraftCommands(knex, [`teama color ${nom} ${color.code}`]);
                 }
 
                 await interaction.editReply({
@@ -186,6 +211,7 @@ module.exports = {
                              `- Catégorie: ${category.name}\n` +
                              `- Salon vocal ajouté comme trigger channel\n` +
                              `- Équipe Minecraft ${mcCreated ? 'créée et vérifiée' : 'en attente'}` +
+                             (color ? `\n- Couleur : ${color.name}` : '') +
                              mcNote
                 });
             } catch (error) {
@@ -202,6 +228,36 @@ module.exports = {
                     await runMinecraftCommands(knex, [`teama disband ${nom}`]).catch(console.error);
                 }
 
+                await replyError(interaction, error);
+            }
+        }
+
+        if (subcommand === 'color') {
+            const nom = interaction.options.getString('nom');
+            const color = TEAM_COLORS.find(c => c.code === interaction.options.getString('couleur'));
+
+            try {
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+                const team = await knex('teams').whereRaw('lower(label) = ?', nom.toLowerCase()).first();
+                if (!team) {
+                    await interaction.editReply({ content: `Équipe **${nom}** non trouvée` });
+                    return;
+                }
+
+                const role = await interaction.guild.roles.fetch(team.role_id).catch(() => null);
+                if (role) {
+                    await role.setColors({ primaryColor: color.hex });
+                }
+
+                const sent = await runMinecraftCommands(knex, [`teama color ${team.label} ${color.code}`]);
+                await interaction.editReply({
+                    content: `✅ Couleur de **${team.label}** : ${color.name}` +
+                             (role ? '' : '\n⚠️ Rôle Discord introuvable') +
+                             (sent ? '' : `\n${MC_PENDING}`)
+                });
+            } catch (error) {
+                console.error('Erreur couleur équipe:', error);
                 await replyError(interaction, error);
             }
         }
