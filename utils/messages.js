@@ -38,7 +38,7 @@ function buildWelcomeMessage(guildName, inscriptionChannelId, tutoChannelId) {
 
 async function sendLoginInstructions(user) {
     try {
-        await user.send(`Connectez vous sur **${process.env.MC_ADDRESS}** en version **${process.env.MC_VERSION}**\nPuis tapez dans le chat \`/login <mot de passe>\` avec le mot de passe reçu à l'inscription\nVous en aurez besoin à chaque connexion\nMot de passe perdu ? Tapez \`/password\` sur le Discord pour en obtenir un nouveau\nVous serez automatiquement mis dans la bonne équipe\nSi vous rencontrez un problème veuillez contacter un modérateur`);
+        await user.send(`Connectez vous sur **${process.env.MC_ADDRESS}** en version **${process.env.MC_VERSION}**\nPuis entrez dans la fenêtre de connexion le mot de passe reçu à l'inscription\nVous en aurez besoin à chaque connexion\nMot de passe perdu ? Tapez \`/password\` sur le Discord pour en obtenir un nouveau\nVous serez automatiquement mis dans la bonne équipe\nSi vous rencontrez un problème veuillez contacter un modérateur`);
         return true;
     } catch (error) {
         console.error('Impossible d\'envoyer le DM:', error);

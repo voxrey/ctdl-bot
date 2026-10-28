@@ -19,6 +19,7 @@ function packet(id, type, body) {
 }
 
 // Une connexion par appel : authentifie, envoie la commande, renvoie la réponse.
+// Sans commande, s'arrête après l'authentification.
 // Le serveur éteint ou injoignable (tunnel SSH fermé) donne une erreur.
 function rconExec(command) {
     return new Promise((resolve, reject) => {
@@ -42,6 +43,10 @@ function rconExec(command) {
                 if (!authed) {
                     if (id === -1) return fail(new Error('RCON: mot de passe refusé'));
                     authed = true;
+                    if (command === undefined) {
+                        socket.end();
+                        return resolve('');
+                    }
                     socket.write(packet(2, 2, command));
                 } else {
                     socket.end();
@@ -54,7 +59,7 @@ function rconExec(command) {
 
 async function getServerState() {
     try {
-        await rconExec('list');
+        await rconExec();
         return 'running';
     } catch {
         return 'offline';

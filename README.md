@@ -81,7 +81,7 @@ Toutes réservées aux administrateurs, sauf `/password`.
 | Commande | |
 |---|---|
 | `/team list\|add\|remove\|stats` | Équipes et statistiques d'inscription |
-| `/user list\|info\|unregister` | Joueurs inscrits |
+| `/user list\|info\|unregister\|register\|team` | Joueurs inscrits ; inscription et changement d'équipe par un admin |
 | `/channel list\|add\|remove` | Salons vocaux qui créent un salon temporaire |
 | `/setup` | Poste le formulaire d'inscription |
 | `/tuto [salon]` | Salon de tutoriel du message de bienvenue |

@@ -3,13 +3,19 @@ const { generatePassword } = require('./password');
 const { sendLoginInstructions, passwordMessage, replyError, INSCRIPTION_ERROR, MC_UNAVAILABLE } = require('./messages');
 const { runMinecraftCommands } = require('./mc-queue');
 
-async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
-    const discordId = interaction.user.id;
+// Inscrit `member` (par défaut l'auteur du formulaire ; un autre membre pour /user register).
+// Le mot de passe est montré à l'auteur de l'interaction, en éphémère.
+async function handleInscription(interaction, knex, selectedTeamId, pseudo, member = interaction.member) {
+    const discordId = member.id;
+    const byAdmin = member.id !== interaction.user.id;
 
     const existingUser = await knex('users').where('discord_id', discordId).first();
 
     if (existingUser) {
-        await interaction.reply({ content: `Vous êtes déjà inscrit. Veuillez contacter un modérateur si rencontrer un problème.`, flags: MessageFlags.Ephemeral });
+        const content = byAdmin
+            ? `<@${discordId}> est déjà inscrit (**${existingUser.minecraft_username}**)`
+            : `Vous êtes déjà inscrit. Veuillez contacter un modérateur si rencontrer un problème.`;
+        await interaction.reply({ content, flags: MessageFlags.Ephemeral });
         return;
     }
 
@@ -69,10 +75,18 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo) {
         const isRelease = appState && appState.release;
 
         if (isRelease) {
-            await sendLoginInstructions(interaction.user);
+            await sendLoginInstructions(member.user);
         }
 
-        await interaction.member.roles.add([teamRole, inscritRole].filter(Boolean));
+        await member.roles.add([teamRole, inscritRole].filter(Boolean));
+
+        if (byAdmin) {
+            await interaction.editReply({
+                content: `<@${discordId}> inscrit dans **${team.label}** avec le pseudo **${pseudo}**\n\n` +
+                         `Mot de passe Minecraft à lui transmettre : \`${password}\`\nIl ne sera plus affiché. Le joueur peut en générer un autre avec \`/password\`.`
+            });
+            return;
+        }
 
         const dmMessage = isRelease
             ? 'Vous avez reçu les instructions de connexion par DM.'

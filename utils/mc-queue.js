@@ -30,6 +30,9 @@ async function sendPending(knex) {
 // Appelé toutes les MC_QUEUE_INTERVAL secondes
 function flushQueue(knex) {
     return withLock(async () => {
+        // File vide : rien à envoyer, on ne contacte pas le serveur (pas de bruit dans ses logs)
+        const { count } = await knex('mc_commands').count('* as count').first();
+        if (count === 0) return;
         if (!(await isServerRunning())) return;
         try {
             await sendPending(knex);

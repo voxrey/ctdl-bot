@@ -1,6 +1,9 @@
 const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
 const { unregisterUser } = require('../utils/unregister');
+const { handleInscription } = require('../utils/inscription-handler');
+const { runMinecraftCommands } = require('../utils/mc-queue');
 const { replyError, MC_PENDING } = require('../utils/messages');
+const teamCommand = require('./team');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -26,7 +29,40 @@ module.exports = {
                 .addUserOption(option =>
                     option.setName('utilisateur')
                         .setDescription('Utilisateur à désenregistrer')
+                        .setRequired(true)))
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('register')
+                .setDescription('Inscrit un utilisateur à sa place')
+                .addUserOption(option =>
+                    option.setName('utilisateur')
+                        .setDescription('Utilisateur à inscrire')
+                        .setRequired(true))
+                .addStringOption(option =>
+                    option.setName('pseudo')
+                        .setDescription('Pseudo Minecraft')
+                        .setRequired(true))
+                .addStringOption(option =>
+                    option.setName('equipe')
+                        .setDescription('Équipe')
+                        .setAutocomplete(true)
+                        .setRequired(true)))
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('team')
+                .setDescription('Change un utilisateur d\'équipe')
+                .addUserOption(option =>
+                    option.setName('utilisateur')
+                        .setDescription('Utilisateur à déplacer')
+                        .setRequired(true))
+                .addStringOption(option =>
+                    option.setName('equipe')
+                        .setDescription('Nouvelle équipe')
+                        .setAutocomplete(true)
                         .setRequired(true))),
+
+    // Même liste d'équipes que /team remove
+    autocomplete: teamCommand.autocomplete,
 
     async execute(interaction, knex) {
         const subcommand = interaction.options.getSubcommand();
@@ -129,10 +165,82 @@ module.exports = {
                 }
 
                 // Les commandes Minecraft peuvent dépasser les 3 s laissées par Discord pour répondre
-                await interaction.deferReply();
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
                 const sent = await unregisterUser(interaction.guild, knex, userData);
 
                 await interaction.editReply({ content: `Utilisateur <@${user.id}> (**${userData.minecraft_username}**) désenregistré` + (sent ? '' : `\n${MC_PENDING}`) });
+            } catch (error) {
+                await replyError(interaction, error);
+            }
+        }
+
+        if (subcommand === 'register') {
+            const user = interaction.options.getUser('utilisateur');
+            const nom = interaction.options.getString('equipe');
+
+            try {
+                const team = await knex('teams').whereRaw('lower(label) = ?', nom.toLowerCase()).first();
+                if (!team) {
+                    await interaction.reply({ content: `Équipe **${nom}** non trouvée`, flags: MessageFlags.Ephemeral });
+                    return;
+                }
+                const member = await interaction.guild.members.fetch(user.id).catch(() => null);
+                if (!member) {
+                    await interaction.reply({ content: `<@${user.id}> n'est pas sur le serveur Discord`, flags: MessageFlags.Ephemeral });
+                    return;
+                }
+
+                await handleInscription(interaction, knex, team.id, interaction.options.getString('pseudo'), member);
+            } catch (error) {
+                await replyError(interaction, error);
+            }
+        }
+
+        if (subcommand === 'team') {
+            const user = interaction.options.getUser('utilisateur');
+            const nom = interaction.options.getString('equipe');
+
+            try {
+                const userData = await knex('users').where('discord_id', user.id).first();
+                if (!userData) {
+                    await interaction.reply({ content: `Utilisateur <@${user.id}> non inscrit`, flags: MessageFlags.Ephemeral });
+                    return;
+                }
+                const team = await knex('teams').whereRaw('lower(label) = ?', nom.toLowerCase()).first();
+                if (!team) {
+                    await interaction.reply({ content: `Équipe **${nom}** non trouvée`, flags: MessageFlags.Ephemeral });
+                    return;
+                }
+                if (team.id === userData.team_id) {
+                    await interaction.reply({ content: `<@${user.id}> est déjà dans **${team.label}**`, flags: MessageFlags.Ephemeral });
+                    return;
+                }
+
+                const newRole = interaction.guild.roles.cache.get(team.role_id);
+                if (!newRole?.editable) {
+                    await interaction.reply({ content: `Rôle de **${team.label}** introuvable ou non attribuable par le bot`, flags: MessageFlags.Ephemeral });
+                    return;
+                }
+
+                // Les commandes Minecraft peuvent dépasser les 3 s laissées par Discord pour répondre
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+                await knex('users').where('discord_id', user.id).update({ team_id: team.id });
+
+                // Le membre a pu quitter le serveur Discord : seule l'équipe Minecraft change alors
+                const member = await interaction.guild.members.fetch(user.id).catch(() => null);
+                if (member) {
+                    const oldTeam = userData.team_id ? await knex('teams').where('id', userData.team_id).first() : null;
+                    if (oldTeam && member.roles.cache.has(oldTeam.role_id)) {
+                        await member.roles.remove(oldTeam.role_id);
+                    }
+                    await member.roles.add(newRole);
+                }
+
+                // Quitte l'ancienne équipe Minecraft et rejoint la nouvelle (à la prochaine connexion s'il est hors ligne)
+                const sent = await runMinecraftCommands(knex, [`tteamset ${userData.minecraft_username} ${team.label}`]);
+
+                await interaction.editReply({ content: `<@${user.id}> (**${userData.minecraft_username}**) déplacé dans **${team.label}**` + (sent ? '' : `\n${MC_PENDING}`) });
             } catch (error) {
                 await replyError(interaction, error);
             }

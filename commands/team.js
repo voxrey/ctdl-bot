@@ -102,7 +102,7 @@ module.exports = {
             const created = [];
 
             try {
-                await interaction.deferReply();
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
                 // 1. Créer le rôle Discord
                 const role = await interaction.guild.roles.create({
@@ -186,7 +186,7 @@ module.exports = {
             const nom = interaction.options.getString('nom');
 
             try {
-                await interaction.deferReply();
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
                 // 1. Récupérer les infos de l'équipe
                 const team = await knex('teams').whereRaw('lower(label) = ?', nom.toLowerCase()).first();
@@ -299,7 +299,7 @@ module.exports = {
 
                 sections.push(`**Non inscrits** : ${nonInscrits}`);
 
-                await interaction.reply({ content: `**Statistiques d'inscription:**\n\n${sections.join('\n')}` });
+                await interaction.reply({ content: `**Statistiques d'inscription:**\n\n${sections.join('\n')}`, flags: MessageFlags.Ephemeral });
             } catch (error) {
                 await replyError(interaction, error);
             }
