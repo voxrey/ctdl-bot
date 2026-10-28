@@ -43,7 +43,7 @@ RCON est la console à distance intégrée à Minecraft. Elle passe en clair : l
    ```bash
    ssh -N -L 25575:127.0.0.1:25575 verso
    ```
-2. Dans `.env` : `RCON_HOST=127.0.0.1`, `RCON_PORT=25575`, `RCON_PASSWORD=` le contenu de `~/ctdl-server/.rcon-password` sur verso (`ssh verso cat ctdl-server/.rcon-password`). Laisser les `PT_*` vides.
+2. Dans `.env` : `RCON_HOST=127.0.0.1`, `RCON_PORT=25575`, `RCON_PASSWORD=` le contenu de `~/ctdl/server/.rcon-password` sur verso (`ssh verso cat ctdl/server/.rcon-password`). Laisser les `PT_*` vides.
 3. `npm start`. Le bot doit afficher `Lien Minecraft : rcon`.
 
 Tunnel fermé ou serveur éteint : le bot voit le serveur comme indisponible et met les commandes en file (voir ci-dessous). Une connexion RCON est ouverte par commande, rien à relancer quand le tunnel revient.
