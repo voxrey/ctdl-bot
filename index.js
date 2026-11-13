@@ -1,6 +1,6 @@
 require('dotenv').config({ quiet: true });
 
-const { Client, GatewayIntentBits, ChannelType, PermissionsBitField, ModalBuilder, TextInputBuilder, TextInputStyle, InteractionType, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, ChannelType, PermissionsBitField, ModalBuilder, TextInputBuilder, TextInputStyle, InteractionType, MessageFlags, REST, Routes } = require('discord.js');
 const knexConfig = require('./knexfile');
 const fs = require('fs');
 const path = require('path');
@@ -35,6 +35,7 @@ for (const file of commandFiles) {
 const { handleInscription } = require('./utils/inscription-handler');
 const { replyError, buildWelcomeMessage, INSCRIPTION_ERROR } = require('./utils/messages');
 const { runMinecraftCommands, flushQueue } = require('./utils/mc-queue');
+const { createPendingRequest, canConfirm, editPendingMessage, dmApplicant, sweepExpired } = require('./utils/pending-registrations');
 
 // Supprime les salons temporaires vidés ou supprimés pendant que le bot était éteint
 async function cleanTempChannels() {
@@ -73,6 +74,10 @@ client.once('clientReady', async () => {
         // Vide aussi la file restée en attente avant le redémarrage
         await runMinecraftCommands(knex, ['say Bot connecté'], 'optional');
         setInterval(() => flushQueue(knex).catch(console.error), (Number(process.env.MC_QUEUE_INTERVAL) || 30) * 1000);
+
+        // Refuse les demandes d'adhésion restées 24 h sans réponse (au démarrage puis toutes les 10 min)
+        await sweepExpired(knex, client).catch(console.error);
+        setInterval(() => sweepExpired(knex, client).catch(console.error), 10 * 60 * 1000);
     } catch (error) {
         console.error('Erreur:', error);
     }
@@ -193,17 +198,79 @@ client.on('interactionCreate', async interaction => {
                 return replyError(interaction, error, INSCRIPTION_ERROR);
             });
         }
+    } else if (interaction.isButton()) {
+        const match = interaction.customId.match(/^reg_(accept|reject)_(\d+)$/);
+        if (match) {
+            await handleRegistrationButton(interaction, match[1], match[2]).catch(error => {
+                console.error('Erreur bouton demande:', error);
+                return replyError(interaction, error);
+            });
+        }
     } else if (interaction.type === InteractionType.ModalSubmit) {
         if (interaction.customId.startsWith('modal_minecraft_pseudo_')) {
             const selectedTeamId = interaction.customId.split('modal_minecraft_pseudo_')[1];
             const pseudo = interaction.fields.getTextInputValue('pseudoInput');
-            await handleInscription(interaction, knex, selectedTeamId, pseudo).catch(error => {
+            try {
+                const appState = await knex('app_state').first();
+                if (appState?.registrations_open ?? true) {
+                    await handleInscription(interaction, knex, selectedTeamId, pseudo);
+                } else {
+                    // Inscriptions fermées : créer une demande à confirmer par l'équipe
+                    const team = await knex('teams').where('id', parseInt(selectedTeamId)).first();
+                    if (!team) {
+                        await interaction.reply({ content: 'Erreur: Équipe invalide', flags: MessageFlags.Ephemeral });
+                    } else {
+                        await createPendingRequest(interaction, knex, team, pseudo);
+                    }
+                }
+            } catch (error) {
                 console.error('Erreur inscription:', error);
                 return replyError(interaction, error, INSCRIPTION_ERROR);
-            });
+            }
         }
     }
 });
+
+// Un membre de l'équipe (ou un admin) accepte/refuse une demande d'adhésion en attente.
+async function handleRegistrationButton(interaction, action, applicantId) {
+    const pending = await knex('pending_registrations').where('discord_id', applicantId).first();
+    if (!pending) {
+        await interaction.message.edit({ components: [] }).catch(() => {});
+        await interaction.reply({ content: 'Cette demande n\'existe plus (déjà traitée ou expirée).', flags: MessageFlags.Ephemeral });
+        return;
+    }
+
+    if (!(await canConfirm(interaction, knex, pending.team_id))) {
+        await interaction.reply({
+            content: 'Seuls les membres inscrits de l\'équipe (ou un admin) peuvent répondre à cette demande.',
+            flags: MessageFlags.Ephemeral
+        });
+        return;
+    }
+
+    if (action === 'reject') {
+        await knex('pending_registrations').where('discord_id', applicantId).delete();
+        await editPendingMessage(client, pending, `❌ Demande de <@${applicantId}> refusée par <@${interaction.user.id}>.`);
+        await dmApplicant(client, applicantId, 'Votre demande d\'adhésion a été refusée. Contactez un modérateur si besoin.');
+        await interaction.reply({ content: 'Demande refusée.', flags: MessageFlags.Ephemeral });
+        return;
+    }
+
+    // Accepter : inscrire le demandeur ; son mot de passe lui part en DM (jamais montré à qui clique)
+    const applicant = await interaction.guild.members.fetch(applicantId).catch(() => null);
+    if (!applicant) {
+        await knex('pending_registrations').where('discord_id', applicantId).delete();
+        await editPendingMessage(client, pending, `⚠️ Demande de <@${applicantId}> annulée : le membre a quitté le serveur.`);
+        await interaction.reply({ content: 'Le demandeur n\'est plus sur le serveur.', flags: MessageFlags.Ephemeral });
+        return;
+    }
+
+    const ok = await handleInscription(interaction, knex, pending.team_id, pending.pseudo, applicant, { deliverPasswordByDm: true });
+    if (ok) {
+        await knex('pending_registrations').where('discord_id', applicantId).delete();
+        await editPendingMessage(client, pending, `✅ Demande de <@${applicantId}> acceptée par <@${interaction.user.id}>.`);
+    }
+}
 
 // Filet de sécurité : une erreur oubliée est loguée au lieu d'arrêter le bot
 process.on('unhandledRejection', error => console.error('Erreur non gérée:', error));

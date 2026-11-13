@@ -47,6 +47,18 @@ exports.up = async function(knex) {
     table.boolean('release').defaultTo(false);
     table.string('inscrit_role_id'); // Rôle "Inscrit", défini par /setup
     table.string('tuto_channel_id'); // Salon de tutoriel, défini par /tuto
+    table.boolean('registrations_open').defaultTo(true); // Phase ouverte : inscription directe ; fermée : demande à confirmer (/registrations)
+  });
+
+  // Demandes d'adhésion en attente quand les inscriptions sont fermées (réunion 2026-11-13).
+  // Une seule demande par joueur : une nouvelle demande remplace l'ancienne.
+  await knex.schema.createTable('pending_registrations', function(table) {
+    table.string('discord_id').primary();
+    table.integer('team_id').unsigned().references('id').inTable('teams').onDelete('CASCADE');
+    table.string('pseudo').notNullable();
+    table.string('channel_id').notNullable(); // salon où est posté le message de confirmation
+    table.string('message_id').notNullable();
+    table.bigInteger('created_at').notNullable(); // epoch ms, pour l'expiration à 24h
   });
 };
 
@@ -55,6 +67,7 @@ exports.up = async function(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function(knex) {
+  await knex.schema.dropTable('pending_registrations');
   await knex.schema.dropTable('app_state');
   await knex.schema.dropTable('mc_commands');
   await knex.schema.dropTable('inscription_messages');
