@@ -93,7 +93,9 @@ Toutes réservées aux administrateurs, sauf `/password`.
 
 ## Migrations
 
-Tant que le bot n'est pas en prod, tout le schéma est dans `migrations/20251126000000_init.js` : on le modifie directement et on supprime `db/database.db` pour repartir de zéro. Les nouvelles migrations, ce sera après la première mise en prod.
+Le schéma de départ est dans `migrations/20251126000000_init.js`. Le bot applique les migrations manquantes à chaque démarrage (`knex.migrate.latest()`).
+
+**Tout changement de schéma passe par une nouvelle migration**, jamais par une modification de `init` : knex ne rejoue pas une migration déjà appliquée, donc une base existante ne recevrait pas le changement. C'est ce qui a cassé le play test 4 (`no such table: pending_registrations`) ; `20261116000000_registrations_repair.js` rattrape ces bases.
 
 ```bash
 npx knex migrate:make nom_de_la_migration
