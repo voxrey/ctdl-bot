@@ -205,6 +205,14 @@ client.on('interactionCreate', async interaction => {
                 console.error('Erreur bouton demande:', error);
                 return replyError(interaction, error);
             });
+            return;
+        }
+        const leaveMatch = interaction.customId.match(/^leave_(confirm|cancel)$/);
+        if (leaveMatch) {
+            await commands.get('quitter').handleButton(interaction, knex, leaveMatch[1]).catch(error => {
+                console.error('Erreur bouton quitter:', error);
+                return replyError(interaction, error);
+            });
         }
     } else if (interaction.type === InteractionType.ModalSubmit) {
         if (interaction.customId.startsWith('modal_minecraft_pseudo_')) {
