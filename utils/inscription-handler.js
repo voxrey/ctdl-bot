@@ -14,10 +14,16 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo, memb
 
     const existingUser = await knex('users').where('discord_id', discordId).first();
 
+    // Déjà inscrit mais sans équipe (après /quitter, play test 7) : on le laisse rejoindre une équipe sans ré-inscrire
+    // le compte (pas de nouveau mot de passe AuthMe : éviter un vol de compte). Son pseudo existant est conservé.
+    if (existingUser && !existingUser.team_id) {
+        return handleRejoin(interaction, knex, selectedTeamId, existingUser, member, byAdmin);
+    }
+
     if (existingUser) {
         const content = byAdmin
             ? `<@${discordId}> est déjà inscrit (**${existingUser.minecraft_username}**)`
-            : `Vous êtes déjà inscrit. Veuillez contacter un modérateur si rencontrer un problème.`;
+            : `Tu es déjà inscrit avec le pseudo **${existingUser.minecraft_username}**. Pour changer d'équipe, fais d'abord \`/quitter\`. Un souci ? Contacte un modérateur.`;
         await interaction.reply({ content, flags: MessageFlags.Ephemeral });
         return false;
     }
@@ -121,6 +127,46 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo, memb
         return true;
     } catch (err) {
         console.error('Erreur inscription:', err);
+        await replyError(interaction, err, INSCRIPTION_ERROR);
+        return false;
+    }
+}
+
+// Rejoindre une équipe pour un compte déjà inscrit mais sans équipe (après /quitter). Pas de ré-inscription AuthMe,
+// pas de nouveau mot de passe : on fixe seulement l'équipe (BetterTeams + base + rôle Discord). Le pseudo est l'existant.
+async function handleRejoin(interaction, knex, selectedTeamId, existingUser, member, byAdmin) {
+    const discordId = member.id;
+    const pseudo = existingUser.minecraft_username;
+
+    const team = await knex('teams').where('id', parseInt(selectedTeamId)).first();
+    if (!team) {
+        await interaction.reply({ content: `Erreur: Équipe invalide`, flags: MessageFlags.Ephemeral });
+        return false;
+    }
+
+    const appState = await knex('app_state').first();
+    const teamRole = interaction.guild.roles.cache.get(team.role_id);
+    const inscritRole = appState?.inscrit_role_id ? interaction.guild.roles.cache.get(appState.inscrit_role_id) : null;
+    if (!teamRole?.editable || (appState?.inscrit_role_id && !inscritRole?.editable)) {
+        console.error(`Rejoin impossible : rôle d'équipe (${team.role_id}) ou rôle "Inscrit" (${appState?.inscrit_role_id}) introuvable ou non attribuable par le bot`);
+        await interaction.reply({ content: INSCRIPTION_ERROR, flags: MessageFlags.Ephemeral });
+        return false;
+    }
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    try {
+        await knex('users').where('discord_id', discordId).update({ team_id: team.id });
+        await runMinecraftCommands(knex, [`marche admin team set ${pseudo} ${team.label}`]);
+        await knex('pending_registrations').where('discord_id', discordId).delete();
+        await member.roles.add([teamRole, inscritRole].filter(Boolean));
+
+        const content = byAdmin
+            ? `<@${discordId}> (**${pseudo}**) a rejoint **${team.label}**.`
+            : `Tu as rejoint **${team.label}** avec ton pseudo **${pseudo}**. Ton mot de passe Minecraft n'a pas changé (utilise \`/password\` si besoin).`;
+        await interaction.editReply({ content });
+        return true;
+    } catch (err) {
+        console.error('Erreur rejoin:', err);
         await replyError(interaction, err, INSCRIPTION_ERROR);
         return false;
     }

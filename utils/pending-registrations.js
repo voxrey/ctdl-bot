@@ -52,9 +52,15 @@ async function createPendingRequest(interaction, knex, team, pseudo) {
     const discordId = interaction.user.id;
 
     const existingUser = await knex('users').where('discord_id', discordId).first();
-    if (existingUser) {
-        await interaction.reply({ content: 'Vous êtes déjà inscrit.', flags: MessageFlags.Ephemeral });
+    // Déjà inscrit avec une équipe : refus (en citant le pseudo, play test 7). Sans équipe (après /quitter) : on le
+    // laisse redemander une équipe ; on force son pseudo existant (la ré-adhésion ne ré-inscrit pas le compte).
+    if (existingUser && existingUser.team_id) {
+        await interaction.reply({ content: `Tu es déjà inscrit avec le pseudo **${existingUser.minecraft_username}**. Pour changer d'équipe, fais d'abord \`/quitter\`.`, flags: MessageFlags.Ephemeral });
         return;
+    }
+    const rejoin = !!existingUser;
+    if (rejoin) {
+        pseudo = existingUser.minecraft_username;
     }
 
     if (!/^[A-Za-z0-9_]{3,16}$/.test(pseudo)) {
@@ -63,7 +69,9 @@ async function createPendingRequest(interaction, knex, team, pseudo) {
     }
 
     const lower = pseudo.toLowerCase();
-    const takenByUser = await knex('users').whereRaw('lower(minecraft_username) = ?', lower).first();
+    // Sur une ré-adhésion, sa propre ligne porte déjà ce pseudo : ne pas le compter comme « déjà pris ».
+    const takenByUser = await knex('users').whereRaw('lower(minecraft_username) = ?', lower)
+        .whereNot('discord_id', discordId).first();
     // Pseudo déjà réservé par une autre demande en attente (pas la sienne, qu'on va remplacer)
     const takenByPending = await knex('pending_registrations')
         .whereRaw('lower(pseudo) = ?', lower).whereNot('discord_id', discordId).first();
