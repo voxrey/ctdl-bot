@@ -211,11 +211,18 @@ client.on('interactionCreate', async interaction => {
             const selectedTeamId = interaction.customId.split('modal_minecraft_pseudo_')[1];
             const pseudo = interaction.fields.getTextInputValue('pseudoInput');
             try {
+                // Révision 2026-11-16 : rejoindre une équipe passe TOUJOURS par une demande
+                // confirmée dans le #général de l'équipe. registrations_open = droit de faire une
+                // demande (ouvert → demande créée ; fermé → aucune demande possible). Le join direct
+                // n'existe que par le bypass admin /user register|team (voir commands/user.js).
                 const appState = await knex('app_state').first();
-                if (appState?.registrations_open ?? true) {
-                    await handleInscription(interaction, knex, selectedTeamId, pseudo);
+                const registrationsOpen = appState?.registrations_open ?? true;
+                if (!registrationsOpen) {
+                    await interaction.reply({
+                        content: 'Les inscriptions sont fermées : impossible de faire une demande pour le moment.',
+                        flags: MessageFlags.Ephemeral,
+                    });
                 } else {
-                    // Inscriptions fermées : créer une demande à confirmer par l'équipe
                     const team = await knex('teams').where('id', parseInt(selectedTeamId)).first();
                     if (!team) {
                         await interaction.reply({ content: 'Erreur: Équipe invalide', flags: MessageFlags.Ephemeral });
