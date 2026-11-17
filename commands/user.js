@@ -3,6 +3,7 @@ const { unregisterUser } = require('../utils/unregister');
 const { handleInscription } = require('../utils/inscription-handler');
 const { runMinecraftCommands } = require('../utils/mc-queue');
 const { replyError, MC_PENDING } = require('../utils/messages');
+const { logEvent } = require('../utils/logger');
 const teamCommand = require('./team');
 
 module.exports = {
@@ -167,6 +168,13 @@ module.exports = {
                 // Les commandes Minecraft peuvent dépasser les 3 s laissées par Discord pour répondre
                 await interaction.deferReply({ flags: MessageFlags.Ephemeral });
                 const sent = await unregisterUser(interaction.guild, knex, userData);
+
+                await logEvent(interaction.client, knex, {
+                    category: 'desinscription',
+                    action: 'désinscription',
+                    actor: `<@${interaction.user.id}>`,
+                    detail: `<@${user.id}> (**${userData.minecraft_username}**) · deop${sent ? '' : ' (en file)'}`,
+                });
 
                 await interaction.editReply({ content: `Utilisateur <@${user.id}> (**${userData.minecraft_username}**) désenregistré` + (sent ? '' : `\n${MC_PENDING}`) });
             } catch (error) {

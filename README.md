@@ -70,7 +70,8 @@ La base SQLite (`db/database.db`) est créée et migrée automatiquement au dém
 1. `/team add nom:<équipe>` pour chaque équipe (crée le rôle, la catégorie privée, un salon texte et un vocal « Créer un salon »)
 2. `/setup channel:<salon> role_inscrit:<rôle>` pour poster le formulaire d'inscription
 3. `/tuto salon:<salon>` pour le salon de tutoriel indiqué dans le message de bienvenue
-4. Le jour J, `/release active:true` envoie à chaque inscrit l'adresse et la version du serveur en MP
+4. `/logs salon:<salon>` pour le salon de journalisation du bot
+5. Le jour J, `/release active:true` envoie à chaque inscrit l'adresse et la version du serveur en MP
 
 ## Mots de passe
 
@@ -84,12 +85,24 @@ Toutes réservées aux administrateurs, sauf `/password`.
 |---|---|
 | `/team list\|add\|remove\|stats` | Équipes et statistiques d'inscription |
 | `/user list\|info\|unregister\|register\|team` | Joueurs inscrits ; inscription et changement d'équipe par un admin |
+| `/admin register\|unregister` | Admins Minecraft : un admin s'enregistre lui-même (compte AuthMe + op, sans équipe) ; retrait = deop + désinscription |
 | `/channel list\|add\|remove` | Salons vocaux qui créent un salon temporaire |
 | `/setup` | Poste le formulaire d'inscription |
 | `/tuto [salon]` | Salon de tutoriel du message de bienvenue |
+| `/logs [salon]` | Définit ou affiche le salon de journalisation |
 | `/release [active]` | Affiche ou change le mode release |
 | `/mc pending` | Commandes Minecraft en attente |
 | `/password [mot_de_passe]` | Nouveau mot de passe Minecraft (joueurs inscrits) |
+
+## Administrateurs Minecraft
+
+L'équipe des admins n'existe pas comme les autres : un admin s'enregistre lui-même avec `/admin register pseudo:<pseudo>` (réservé à la permission Discord *Administrator*). Le bot crée son compte AuthMe, l'op (donc exempté de `require-team`, il joue sans équipe) et l'enregistre (`users.is_admin`, sans équipe).
+
+Une personne non enregistrée n'est jamais op : toute désinscription (`/user unregister`, `/admin unregister`) `deop` le pseudo en plus de `authme unregister`, pour qu'un désinscrit ne reste pas dans `ops.json`. Le `deop` passe par la file : il part au retour du serveur même si celui-ci était éteint.
+
+## Journalisation
+
+Tout passe dans le salon défini par `/logs` (`app_state.log_channel_id`) et, en secours, dans la sortie standard de l'hôte : appels de commandes (avec options, mots de passe masqués), inscriptions, désinscriptions, enregistrements/retraits d'admins (op/deop), connexion du bot et erreurs. Les logs n'envoient aucune notification (mentions désactivées) et ne stockent jamais de mot de passe.
 
 ## Migrations
 

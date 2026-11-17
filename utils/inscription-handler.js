@@ -2,6 +2,7 @@ const { MessageFlags } = require('discord.js');
 const { generatePassword } = require('./password');
 const { sendLoginInstructions, passwordMessage, replyError, INSCRIPTION_ERROR, MC_UNAVAILABLE } = require('./messages');
 const { runMinecraftCommands } = require('./mc-queue');
+const { logEvent } = require('./logger');
 
 // Inscrit `member` (par défaut l'auteur du formulaire ; un autre membre pour /user register ou l'acceptation d'une demande).
 // Le mot de passe est montré à l'auteur de l'interaction, en éphémère — sauf `deliverPasswordByDm`, qui l'envoie en DM au
@@ -92,6 +93,13 @@ async function handleInscription(interaction, knex, selectedTeamId, pseudo, memb
 
         await member.roles.add([teamRole, inscritRole].filter(Boolean));
 
+        await logEvent(interaction.client, knex, {
+            category: 'inscription',
+            action: 'inscription',
+            actor: `<@${discordId}>`,
+            detail: `pseudo **${pseudo}** · équipe **${team.label}**${byAdmin ? ` · par <@${interaction.user.id}>` : ''}`,
+        });
+
         // Acceptation d'une demande : le mot de passe part en DM au joueur, jamais montré à celui qui a cliqué
         if (deliverPasswordByDm) {
             let dmOk = true;
@@ -159,6 +167,13 @@ async function handleRejoin(interaction, knex, selectedTeamId, existingUser, mem
         await runMinecraftCommands(knex, [`marche admin team set ${pseudo} ${team.label}`]);
         await knex('pending_registrations').where('discord_id', discordId).delete();
         await member.roles.add([teamRole, inscritRole].filter(Boolean));
+
+        await logEvent(interaction.client, knex, {
+            category: 'inscription',
+            action: 'rejoint une équipe',
+            actor: `<@${discordId}>`,
+            detail: `pseudo **${pseudo}** · équipe **${team.label}**${byAdmin ? ` · par <@${interaction.user.id}>` : ''}`,
+        });
 
         const content = byAdmin
             ? `<@${discordId}> (**${pseudo}**) a rejoint **${team.label}**.`

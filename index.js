@@ -36,6 +36,7 @@ const { handleInscription } = require('./utils/inscription-handler');
 const { replyError, buildWelcomeMessage, INSCRIPTION_ERROR } = require('./utils/messages');
 const { runMinecraftCommands, flushQueue } = require('./utils/mc-queue');
 const { createPendingRequest, canConfirm, editPendingMessage, dmApplicant, sweepExpired } = require('./utils/pending-registrations');
+const { logEvent, logCommand, postLog } = require('./utils/logger');
 
 // Supprime les salons temporaires vidés ou supprimés pendant que le bot était éteint
 async function cleanTempChannels() {
@@ -73,6 +74,7 @@ client.once('clientReady', async () => {
 
         // Vide aussi la file restée en attente avant le redémarrage
         await runMinecraftCommands(knex, ['say Bot connecté'], 'optional');
+        await logEvent(client, knex, { category: 'systeme', action: 'bot connecté', detail: client.user.tag });
         setInterval(() => flushQueue(knex).catch(console.error), (Number(process.env.MC_QUEUE_INTERVAL) || 30) * 1000);
 
         // Refuse les demandes d'adhésion restées 24 h sans réponse (au démarrage puis toutes les 10 min)
@@ -156,6 +158,7 @@ client.on('interactionCreate', async interaction => {
     if (interaction.isChatInputCommand()) {
         const command = commands.get(interaction.commandName);
         if (command) {
+            await logCommand(interaction, knex).catch(() => {});
             try {
                 await command.execute(interaction, knex, client);
             } catch (error) {
@@ -165,6 +168,7 @@ client.on('interactionCreate', async interaction => {
                     return;
                 }
                 console.error('Erreur commande:', error);
+                await logEvent(client, knex, { category: 'erreur', action: `/${interaction.commandName}`, actor: `<@${interaction.user.id}>`, detail: error.message }).catch(() => {});
                 await replyError(interaction, error);
             }
         }
@@ -288,7 +292,10 @@ async function handleRegistrationButton(interaction, action, applicantId) {
 }
 
 // Filet de sécurité : une erreur oubliée est loguée au lieu d'arrêter le bot
-process.on('unhandledRejection', error => console.error('Erreur non gérée:', error));
+process.on('unhandledRejection', error => {
+    console.error('Erreur non gérée:', error);
+    postLog(client, knex, `\`erreur\` **non gérée** — ${error?.message || error}`).catch(() => {});
+});
 
 // Arrêt propre : en conteneur, node ne réagit pas à SIGTERM par défaut
 for (const signal of ['SIGTERM', 'SIGINT']) {

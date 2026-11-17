@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { runMinecraftCommands } = require('../utils/mc-queue');
 const { replyError, MC_PENDING } = require('../utils/messages');
+const { logEvent } = require('../utils/logger');
 
 // Un joueur quitte son équipe depuis Discord (décision play test 6 : quitter se fait par le bot,
 // pas en jeu). Il reste inscrit (compte Minecraft + rôle « Inscrit » conservés) et peut redemander
@@ -76,6 +77,13 @@ module.exports = {
         } catch (roleError) {
             console.error(`Erreur retrait rôle équipe ${interaction.user.id}:`, roleError);
         }
+
+        await logEvent(interaction.client, knex, {
+            category: 'desinscription',
+            action: 'quitte son équipe',
+            actor: `<@${interaction.user.id}>`,
+            detail: `**${user.minecraft_username}** · ${oldTeam ? `équipe **${oldTeam.label}**` : 'sans équipe'} (reste inscrit)`,
+        });
 
         const label = oldTeam ? `**${oldTeam.label}**` : 'ton équipe';
         await interaction.editReply({ content: `Tu as quitté ${label}. Tu restes inscrit ; utilise le formulaire pour rejoindre une équipe.` + (sent ? '' : `\n${MC_PENDING}`) });

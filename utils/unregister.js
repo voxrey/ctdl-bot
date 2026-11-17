@@ -3,7 +3,9 @@ const { runMinecraftCommands } = require('./mc-queue');
 // Désinscrit un joueur : Minecraft, rôles Discord (équipes + "Inscrit") et base.
 // Renvoie false si la désinscription Minecraft est restée en file
 async function unregisterUser(guild, knex, user) {
-    const sent = await runMinecraftCommands(knex, [`authme unregister ${user.minecraft_username}`, `marche admin team clear ${user.minecraft_username}`]);
+    // `deop` en file (pas 'optional') : un désinscrit, admin compris, ne doit jamais rester dans ops.json,
+    // même si le serveur est éteint au moment de la désinscription (la commande part à son retour).
+    const sent = await runMinecraftCommands(knex, [`authme unregister ${user.minecraft_username}`, `deop ${user.minecraft_username}`, `marche admin team clear ${user.minecraft_username}`]);
     await runMinecraftCommands(knex, [`kick ${user.minecraft_username}`], 'optional');
 
     // Le membre a pu quitter le serveur
